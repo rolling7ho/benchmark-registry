@@ -1,0 +1,19 @@
+<% layout('layout.eta') %>
+<h1>Feedback Submissions</h1>
+<p class="admin-context">Administrator review queue. Submissions are not public registry records.</p>
+
+<form class="admin-filters" method="get" action="/admin/feedback">
+  <div class="filter-field"><label for="status-filter">Status</label><select id="status-filter" name="status"><option value="">All statuses</option><% it.statuses.forEach(function(status) { %><option value="<%= status.value %>"<%= it.selectedStatus === status.value ? ' selected' : '' %>><%= status.label %></option><% }) %></select></div>
+  <div class="filter-field"><label for="type-filter">Type</label><select id="type-filter" name="type"><option value="">All types</option><% it.types.forEach(function(type) { %><option value="<%= type.value %>"<%= it.selectedType === type.value ? ' selected' : '' %>><%= type.label %></option><% }) %></select></div>
+  <button type="submit">Filter</button>
+</form>
+
+<div class="table-scroll" tabindex="0" aria-label="Feedback submissions table">
+  <table class="feedback-admin-table">
+    <thead><tr><th>Status</th><th>Type</th><th>Record</th><th>Message</th><th>Submitted</th></tr></thead>
+    <tbody>
+      <% it.submissions.forEach(function(submission) { %><tr><td><%= it.statusLabels[submission.status] %></td><td><%= it.typeLabels[submission.type] %></td><td><% if (submission.recordIdentifier === null) { %>—<% } else if (submission.recordExists) { %><a href="/records/<%= encodeURIComponent(submission.recordIdentifier) %>"><code><%= submission.recordIdentifier %></code></a><% } else { %><code><%= submission.recordIdentifier %></code><% } %></td><td><a href="/admin/feedback/<%= submission.id %>"><%= submission.message.length > 180 ? submission.message.slice(0, 177) + '…' : submission.message %></a></td><td><time datetime="<%= submission.createdAt.toISOString() %>"><%= submission.createdAt.toISOString() %></time></td></tr><% }) %>
+      <% if (it.submissions.length === 0) { %><tr><td colspan="5" class="empty-state">No feedback submissions match the selected filters.</td></tr><% } %>
+    </tbody>
+  </table>
+</div>

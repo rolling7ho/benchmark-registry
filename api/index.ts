@@ -17,6 +17,14 @@ const database = createDatabaseFromPool(pool);
 const app = createApp({
   database,
   runtimeDirectory: path.join(process.cwd(), 'dist'),
+  ...(environment.ADMIN_USERNAME === undefined
+    ? {}
+    : {
+        adminAuth: {
+          username: environment.ADMIN_USERNAME,
+          password: environment.ADMIN_PASSWORD!,
+        },
+      }),
 });
 
 await app.ready();

@@ -9,6 +9,7 @@ import type {
   SourceRole,
   SourceType,
 } from './constants.js';
+import type { FeedbackStatus, FeedbackType } from '../feedback/types.js';
 
 type NullableDateColumn = ColumnType<
   string | null,
@@ -306,6 +307,19 @@ export interface IngestionCandidatesTable {
   updated_at: Generated<Date>;
 }
 
+export interface FeedbackSubmissionsTable {
+  id: Generated<string>;
+  type: FeedbackType;
+  record_identifier: string | null;
+  message: string;
+  source_url: string | null;
+  email: string | null;
+  status: Generated<FeedbackStatus>;
+  submission_token: string;
+  created_at: Generated<Date>;
+  updated_at: TimestampColumn;
+}
+
 export interface DatabaseSchema {
   registry_metadata: RegistryMetadataTable;
   organizations: OrganizationsTable;
@@ -324,4 +338,5 @@ export interface DatabaseSchema {
   record_provenance_events: RecordProvenanceEventsTable;
   ingestion_jobs: IngestionJobsTable;
   ingestion_candidates: IngestionCandidatesTable;
+  feedback_submissions: FeedbackSubmissionsTable;
 }

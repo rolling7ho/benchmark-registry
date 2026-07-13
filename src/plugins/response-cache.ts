@@ -5,7 +5,8 @@ export function registerDynamicResponseCaching(app: FastifyInstance): void {
     const contentType = reply.getHeader('content-type');
     if (
       typeof contentType === 'string' &&
-      contentType.toLowerCase().startsWith('text/html')
+      contentType.toLowerCase().startsWith('text/html') &&
+      reply.getHeader('cache-control') === undefined
     ) {
       void reply.header('Cache-Control', 'no-cache');
     }

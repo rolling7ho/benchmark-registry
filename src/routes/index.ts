@@ -486,7 +486,7 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         record: {
           ...record,
           canonicalUrl: `${CANONICAL_ORIGIN}/records/${encodeURIComponent(record.recordId)}`,
-          correctionUrl: '/docs#contact-us',
+          correctionUrl: `/feedback?record=${encodeURIComponent(record.recordId)}&type=incorrect-record`,
           modelSlug: modelSlug(record.modelIdentifier),
           additionalConfigurationDisplay:
             Object.keys(record.additionalConfiguration).length === 0
@@ -846,6 +846,7 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
             '/docs',
             '/privacy',
             '/terms',
+            '/feedback',
           ].map((path) => ({ path })),
         ),
       ),

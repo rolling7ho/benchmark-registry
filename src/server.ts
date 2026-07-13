@@ -1,6 +1,7 @@
 import { createApp } from './application.js';
 import { loadEnvironment } from './config/env.js';
 import { createDatabase } from './db/database.js';
+import { sanitizeDatabaseTarget } from './web/database-target.js';
 
 async function startServer(): Promise<void> {
   let app: ReturnType<typeof createApp> | undefined;
@@ -8,7 +9,18 @@ async function startServer(): Promise<void> {
   try {
     const environment = loadEnvironment();
     const database = createDatabase(environment.DATABASE_URL);
-    const currentApp = createApp({ database });
+    const currentApp = createApp({
+      database,
+      databaseTarget: sanitizeDatabaseTarget(environment.DATABASE_URL),
+      ...(environment.ADMIN_USERNAME === undefined
+        ? {}
+        : {
+            adminAuth: {
+              username: environment.ADMIN_USERNAME,
+              password: environment.ADMIN_PASSWORD!,
+            },
+          }),
+    });
     app = currentApp;
 
     let isShuttingDown = false;

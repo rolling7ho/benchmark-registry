@@ -189,7 +189,10 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
       expect(detail.body).toContain('Copy record ID');
       expect(detail.body).toContain('Copy canonical URL');
       expect(detail.body).toContain('Share record');
-      expect(detail.body).toContain('Report a correction');
+      expect(detail.body).toContain('Report record');
+      expect(detail.body).toContain(
+        '/feedback?record=BR-00155-001&amp;type=incorrect-record',
+      );
       expect(detail.body).toContain('class="source-link"');
       expect(detail.body).toContain('not necessarily directly comparable');
       expect(

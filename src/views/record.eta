@@ -5,7 +5,7 @@
   <button type="button" data-copy-value="<%= it.record.recordId %>" data-default-label="Copy record ID">Copy record ID</button>
   <button type="button" data-copy-value="<%= it.record.canonicalUrl %>" data-default-label="Copy canonical URL">Copy canonical URL</button>
   <button type="button" data-share-url="<%= it.record.canonicalUrl %>" data-share-title="<%= it.record.recordId %> — Benchmark Registry" data-default-label="Share record">Share record</button>
-  <a href="<%= it.record.correctionUrl %>">Report a correction</a>
+  <a href="<%= it.record.correctionUrl %>">Report record</a>
 </div>
 <p class="canonical-record-url">Canonical URL: <a href="<%= it.record.canonicalUrl %>"><%= it.record.canonicalUrl %></a></p>
 <p>Benchmark scores may depend on benchmark version, evaluation configuration, model snapshot, and evaluator. Records sharing a benchmark name are not necessarily directly comparable.</p>

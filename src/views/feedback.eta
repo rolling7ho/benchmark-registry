@@ -1,0 +1,39 @@
+<% layout('layout.eta') %>
+<h1>Feedback and Corrections</h1>
+<p>Report an incorrect benchmark record, a missing result, a search issue, or another problem with Benchmark Registry.</p>
+<p>If you are reporting a record issue, include a supporting source where possible. An email address is optional.</p>
+
+<% if (it.submitted) { %><p class="status-notice" role="status">Feedback submitted. Thank you for helping improve the registry.</p><% } %>
+<% if (it.error) { %><p class="form-error" role="alert">Unable to submit feedback. Check the form fields and try again.</p><% } %>
+
+<form class="feedback-form" method="post" action="/feedback">
+  <div class="form-field">
+    <label for="feedback-type">Type</label>
+    <select id="feedback-type" name="type" required>
+      <% it.types.forEach(function(type) { %><option value="<%= type.value %>"<%= it.values.type === type.value ? ' selected' : '' %>><%= type.label %></option><% }) %>
+    </select>
+  </div>
+  <div class="form-field">
+    <label for="record-identifier">Record ID <span class="optional-label">(optional)</span></label>
+    <input id="record-identifier" name="record_identifier" type="text" value="<%= it.values.recordIdentifier %>" maxlength="64" autocomplete="off" placeholder="BR-00155-001" aria-describedby="record-identifier-help">
+    <small id="record-identifier-help">Enter a complete Benchmark Record Identifier when the feedback concerns a specific record.</small>
+  </div>
+  <div class="form-field">
+    <label for="feedback-message">Message</label>
+    <textarea id="feedback-message" name="message" rows="8" maxlength="4000" required><%= it.values.message %></textarea>
+  </div>
+  <div class="form-field">
+    <label for="source-url">Supporting source URL <span class="optional-label">(optional)</span></label>
+    <input id="source-url" name="source_url" type="url" value="<%= it.values.sourceUrl %>" maxlength="2048" inputmode="url" placeholder="https://example.org/source">
+  </div>
+  <div class="form-field">
+    <label for="feedback-email">Email <span class="optional-label">(optional)</span></label>
+    <input id="feedback-email" name="email" type="email" value="<%= it.values.email %>" maxlength="254" autocomplete="email">
+  </div>
+  <div class="honeypot-field" aria-hidden="true">
+    <label for="feedback-website">Website</label>
+    <input id="feedback-website" name="website" type="text" value="" tabindex="-1" autocomplete="off">
+  </div>
+  <input type="hidden" name="submission_token" value="<%= it.submissionToken %>">
+  <button type="submit">Submit feedback</button>
+</form>

@@ -108,7 +108,10 @@ Exact identifiers short-circuit broader search. Unresolved queries use parameter
 - `/recent`
 - `/sources`
 - `/docs`
+- `/feedback` — public feedback and correction submission form
 - `/health`
+
+Public feedback is validated and written only by the server; browsers never receive database credentials. Configure both `ADMIN_USERNAME` and `ADMIN_PASSWORD` (minimum 12 characters) to enable the HTTP Basic-protected `/admin/feedback` review queue. Leave both unset to keep web administration disabled. The database migration enables row-level security and gives Supabase `anon` and `authenticated` roles no direct privileges or policies on feedback submissions.
 
 Exact record search and record detail are deliberately separate. `/search?q=BR-00155-001` returns one standard registry row; `/records/BR-00155-001` displays the complete record context and provenance. Unknown context remains unknown and never implies provider defaults.
 

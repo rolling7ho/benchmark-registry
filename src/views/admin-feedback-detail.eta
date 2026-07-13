@@ -1,0 +1,22 @@
+<% layout('layout.eta') %>
+<p><a href="/admin/feedback">← Feedback submissions</a></p>
+<h1>Feedback Submission <%= it.submission.id %></h1>
+<dl class="record-metadata wide-metadata">
+  <dt>Status</dt><dd><%= it.statusLabel %></dd>
+  <dt>Type</dt><dd><%= it.typeLabel %></dd>
+  <dt>Record Identifier</dt><dd><% if (it.submission.recordIdentifier === null) { %>Not provided<% } else if (it.submission.recordExists) { %><a href="/records/<%= encodeURIComponent(it.submission.recordIdentifier) %>"><code><%= it.submission.recordIdentifier %></code></a><% } else { %><code><%= it.submission.recordIdentifier %></code> (record not found)<% } %></dd>
+  <dt>Supporting Source</dt><dd><% if (it.submission.sourceUrl === null) { %>Not provided<% } else { %><a href="<%= it.submission.sourceUrl %>" target="_blank" rel="noopener noreferrer"><%= it.submission.sourceUrl %></a><% } %></dd>
+  <dt>Email</dt><dd><%= it.submission.email ?? 'Not provided' %></dd>
+  <dt>Submitted</dt><dd><time datetime="<%= it.submission.createdAt.toISOString() %>"><%= it.submission.createdAt.toISOString() %></time></dd>
+  <dt>Updated</dt><dd><time datetime="<%= it.submission.updatedAt.toISOString() %>"><%= it.submission.updatedAt.toISOString() %></time></dd>
+</dl>
+
+<h2>Message</h2>
+<p class="feedback-message"><%= it.submission.message %></p>
+
+<h2>Update Status</h2>
+<form class="status-form" method="post" action="/admin/feedback/<%= it.submission.id %>/status">
+  <label for="feedback-status">Status</label>
+  <select id="feedback-status" name="status"><% it.statuses.forEach(function(status) { %><option value="<%= status.value %>"<%= it.submission.status === status.value ? ' selected' : '' %>><%= status.label %></option><% }) %></select>
+  <button type="submit">Update status</button>
+</form>

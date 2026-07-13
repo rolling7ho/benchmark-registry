@@ -102,6 +102,15 @@ input {
   width: min(540px, 70vw);
   font: inherit;
 }
+textarea {
+  width: min(700px, 100%);
+  min-height: 120px;
+  resize: vertical;
+  border: 1px solid #555;
+  border-radius: 0;
+  padding: 5px;
+  font: inherit;
+}
 button {
   border: 1px solid #444;
   border-radius: 0;
@@ -362,6 +371,94 @@ pre {
   color: #777;
   padding: 0 4px;
 }
+.feedback-form {
+  display: grid;
+  gap: 10px;
+  max-width: 720px;
+  margin-top: 12px;
+}
+.form-field {
+  display: grid;
+  gap: 3px;
+}
+.form-field label,
+.status-form label {
+  font-weight: bold;
+}
+.form-field input {
+  width: min(700px, 100%);
+}
+.form-field small,
+.optional-label,
+.admin-context {
+  color: #555;
+  font-weight: normal;
+}
+.form-error {
+  border-left: 4px solid #8b1a1a;
+  padding: 4px 7px;
+  background: #f4eaea;
+}
+.honeypot-field {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.admin-filters,
+.status-form {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+  border: 1px solid #999;
+  background: #f1f3f5;
+  padding: 7px;
+  margin: 7px 0;
+}
+.feedback-admin-table {
+  min-width: 800px;
+}
+.feedback-admin-table td:last-child {
+  white-space: nowrap;
+}
+.feedback-message {
+  max-width: 900px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.dev-banner {
+  background: crimson;
+  color: #fff;
+  font-weight: bold;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  padding: 3px 10px;
+}
+.dev-banner a {
+  color: #fff;
+  text-decoration: none;
+}
+.dev-banner a:hover,
+.dev-banner a:focus-visible {
+  text-decoration: underline;
+}
+.dev-mode .institutional-bar {
+  background: crimson;
+  border-bottom-color: #7a0019;
+}
+.dev-status-ok {
+  border-left: 4px solid #1a6b1a;
+  padding: 4px 7px;
+  background: #eaf4ea;
+}
+.dev-status-error {
+  border-left: 4px solid #8b1a1a;
+  padding: 4px 7px;
+  background: #f4eaea;
+}
 
 @media (max-width: 640px) {
   :root {
@@ -414,6 +511,10 @@ pre {
   select {
     width: 100%;
     max-width: none;
+  }
+  .feedback-form input,
+  .feedback-form textarea {
+    font-size: 16px;
   }
 }
 

@@ -57,6 +57,7 @@ describe('public application routes without a database', () => {
     expect(response.body).toContain('type="number" min="1" max="1"');
     expect(response.body).toContain('<a href="/privacy">Privacy</a>');
     expect(response.body).toContain('<a href="/terms">Terms</a>');
+    expect(response.body).toContain('<a href="/feedback">Feedback</a>');
     expect(response.body).toContain(
       '<a href="https://github.com/rolling7ho/benchmark-registry">GitHub</a>',
     );
@@ -149,6 +150,7 @@ describe('public application routes without a database', () => {
     expect(response.body).toContain('href="mailto:cowcow21@yahoo.com"');
     if (url === '/privacy') {
       expect(response.body).toContain('Vercel’s Privacy Notice');
+      expect(response.body).toContain('An email address is not required');
       expect(response.body).toContain(
         'be indemnified for damages as provided by law',
       );
@@ -270,6 +272,9 @@ describe('public application routes without a database', () => {
     );
     expect(pages.body).toContain(
       '<loc>https://benchmarkregistry.org/terms</loc>',
+    );
+    expect(pages.body).toContain(
+      '<loc>https://benchmarkregistry.org/feedback</loc>',
     );
   });
 

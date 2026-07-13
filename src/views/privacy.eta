@@ -8,10 +8,10 @@
   <h2>Information we process</h2>
   <p><strong>No user accounts.</strong> Benchmark Registry does not offer user accounts, public profiles, comments, or account-based personalization. You may browse and search the public registry without giving us your name or contact details.</p>
   <p><strong>Technical information.</strong> When you access the website, our hosting provider may automatically process information needed to deliver, maintain, and secure the service. This may include your IP address, approximate location derived from your IP address, browser and device type, operating system, requested pages, referring page, request date and time, and diagnostic or security logs.</p>
-  <p><strong>Information you send us.</strong> If you contact us, we process your email address and the contents of your message, together with any information you choose to provide.</p>
+  <p><strong>Information you send us.</strong> If you use the feedback and corrections form or otherwise contact us, we process the contents of your message, any record identifier or supporting source you provide, and your email address if you voluntarily provide one. An email address is not required to submit feedback.</p>
 
   <h2>Analytics and cookies</h2>
-  <p>As of the effective date, Benchmark Registry does not use a separate web analytics service, advertising trackers, or analytics cookies. The website may still generate ordinary infrastructure and security logs as described above. If our analytics practices materially change, we will update this policy.</p>
+  <p>Benchmark Registry uses Vercel Web Analytics, a cookieless analytics service. It processes aggregated page-view and visit metrics, such as the page visited, referrer, approximate country or region, and device or browser type, without using tracking cookies or building an individual visitor profile. We do not use advertising trackers. The website may also generate ordinary infrastructure and security logs as described above. If our analytics practices materially change, we will update this policy.</p>
 
   <h2>Why we process information</h2>
   <p>We process information only as reasonably necessary to:</p>
@@ -32,7 +32,7 @@
   <p>Vercel operates infrastructure in multiple jurisdictions. Technical information may therefore be processed outside the Philippines, subject to the provider’s contractual, privacy, and security arrangements and applicable law.</p>
 
   <h2>Retention</h2>
-  <p>We retain correspondence only for as long as reasonably necessary to answer the inquiry, maintain an appropriate record, resolve disputes, or comply with law. Infrastructure and security logs are retained according to Vercel’s applicable retention practices. We do not set a more specific infrastructure-log period and will not represent one where it is not known to us.</p>
+  <p>We retain feedback and correspondence only for as long as reasonably necessary to review or resolve the submission, maintain an appropriate record, resolve disputes, or comply with law. Infrastructure and security logs are retained according to Vercel’s applicable retention practices. We do not set a more specific infrastructure-log period and will not represent one where it is not known to us.</p>
 
   <h2>Data security</h2>
   <p>We use reasonable administrative and technical measures intended to protect information. No internet transmission, hosting platform, or storage system can be guaranteed to be completely secure.</p>
