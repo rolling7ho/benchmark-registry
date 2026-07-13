@@ -16,6 +16,7 @@ attachDatabasePool(pool);
 const database = createDatabaseFromPool(pool);
 const app = createApp({
   database,
+  production: true,
   rateLimitSecret:
     environment.FEEDBACK_RATE_LIMIT_SECRET ?? environment.DATABASE_URL,
   runtimeDirectory: path.join(process.cwd(), 'dist'),
