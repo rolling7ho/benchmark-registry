@@ -1,9 +1,9 @@
 import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-import { createApp } from './application.js';
-import { loadEnvironment } from './config/env.js';
-import { createDatabase } from './db/database.js';
+import { createApp } from '../src/application.js';
+import { loadEnvironment } from '../src/config/env.js';
+import { createDatabase } from '../src/db/database.js';
 
 const environment = loadEnvironment();
 const database = createDatabase(environment.DATABASE_URL);

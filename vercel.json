@@ -1,9 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "fastify",
+  "framework": null,
+  "buildCommand": "pnpm build",
   "functions": {
-    "src/app.ts": {
+    "api/index.ts": {
       "includeFiles": "dist/**"
     }
-  }
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
 }
