@@ -68,6 +68,28 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
       ]);
     });
 
+    it('counts the first page and clamps out-of-range pages', async () => {
+      const firstPage = await getRegistryRecords(
+        database,
+        { kind: 'RECENT' },
+        1,
+        2,
+      );
+      expect(firstPage.page).toBe(1);
+      expect(firstPage.records).toHaveLength(2);
+      expect(firstPage.total).toBeGreaterThan(2);
+
+      const finalPage = await getRegistryRecords(
+        database,
+        { kind: 'RECENT' },
+        999,
+        2,
+      );
+      expect(finalPage.page).toBe(Math.ceil(firstPage.total / 2));
+      expect(finalPage.records.length).toBeGreaterThan(0);
+      expect(finalPage.total).toBe(firstPage.total);
+    });
+
     it('model identity forms return the same canonical record set', async () => {
       const resultSets = await Promise.all(
         ['BR-00155', 'OPNAI-55', 'GPT-5.5', 'GPT 5.5'].map(async (query) => {

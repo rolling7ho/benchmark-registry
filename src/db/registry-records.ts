@@ -264,15 +264,20 @@ export async function getRegistryRecords(
   pageSize = REGISTRY_PAGE_SIZE,
 ): Promise<RegistryRecordPage> {
   const filtered = applyFilter(joinedRecords(db), filter);
-  const countRow = await filtered
-    .clearSelect()
-    .select((eb) => eb.fn.countAll<string>().as('count'))
-    .executeTakeFirstOrThrow();
-  const total = Number(countRow.count);
-  const effectivePage = Math.min(
-    page,
-    Math.max(1, Math.ceil(total / pageSize)),
-  );
+  let total: number;
+  let effectivePage: number;
+
+  if (page === 1) {
+    total = 0;
+    effectivePage = 1;
+  } else {
+    const countRow = await filtered
+      .clearSelect()
+      .select((eb) => eb.fn.countAll<string>().as('count'))
+      .executeTakeFirstOrThrow();
+    total = Number(countRow.count);
+    effectivePage = Math.min(page, Math.max(1, Math.ceil(total / pageSize)));
+  }
   const offset = (effectivePage - 1) * pageSize;
 
   let resultQuery = filtered
@@ -290,6 +295,7 @@ export async function getRegistryRecords(
       'benchmark_records.evaluation_date as evaluationDate',
       'sources.url as sourceUrl',
       'benchmark_records.status as recordStatus',
+      sql<string>`count(*) over ()`.as('totalCount'),
     ]);
 
   if (filter.kind === 'RECENT') {
@@ -339,17 +345,27 @@ export async function getRegistryRecords(
 
   const rows = await resultQuery.limit(pageSize).offset(offset).execute();
 
+  if (page === 1) {
+    total = rows[0] === undefined ? 0 : Number(rows[0].totalCount);
+  }
+
   return {
     records: rows.map((row) => ({
-      ...row,
+      recordId: row.recordId,
+      modelId: row.modelId,
       modelSlug: modelSlug(row.modelId),
+      modelName: row.modelName,
+      benchmarkSlug: row.benchmarkSlug,
       benchmarkName: formatBenchmarkDisplay({
         familyName: row.benchmarkName,
         versionLabel: row.benchmarkVersionLabel,
         variantName: row.benchmarkVariantName,
       }),
+      metricName: row.metricName,
+      scoreDisplay: row.scoreDisplay,
       evaluationDate: isoDate(row.evaluationDate),
       sourceUrl: safeSourceUrl(row.sourceUrl),
+      recordStatus: row.recordStatus,
     })),
     page: effectivePage,
     pageSize,

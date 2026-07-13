@@ -47,20 +47,19 @@ export async function resolveSearch(
   if (normalizedQuery.length === 0) return { kind: 'EMPTY', displayQuery };
   const identifierCandidate = displayQuery.toUpperCase();
 
-  const record = await db
-    .selectFrom('benchmark_records')
-    .select('record_id')
-    .where('record_id', '=', identifierCandidate)
-    .executeTakeFirst();
-  if (record !== undefined) {
-    return { kind: 'EXACT_RECORD', displayQuery, recordId: record.record_id };
-  }
-
-  // All non-record exact resolution candidates are fetched in one database
-  // round trip. The priority values preserve the documented resolution order
-  // while avoiding the former worst-case chain of ten sequential queries.
+  // All exact resolution candidates are fetched in one database round trip.
+  // Priority zero preserves the product-critical exact-record short circuit:
+  // no broader result query is run when an exact published record ID exists.
   const matches = await sql<ExactSearchMatch>`
     WITH exact_matches AS (
+      SELECT 0 AS priority, 'EXACT_RECORD' AS kind,
+             benchmark_records.id::text AS entity_id,
+             benchmark_records.record_id AS matched_value,
+             NULL::text AS alias_type
+      FROM benchmark_records
+      WHERE benchmark_records.record_id = ${identifierCandidate}
+
+      UNION ALL
       SELECT 10 AS priority, 'RECORD_PREFIX' AS kind,
              models.id::text AS entity_id,
              models.record_prefix AS matched_value,
@@ -154,6 +153,12 @@ export async function resolveSearch(
       }
     }
     switch (first.kind) {
+      case 'EXACT_RECORD':
+        return {
+          kind: 'EXACT_RECORD',
+          displayQuery,
+          recordId: first.matched_value!,
+        };
       case 'RECORD_PREFIX':
         return {
           kind: 'RECORD_PREFIX',
