@@ -8,6 +8,12 @@ import type { DatabaseSchema } from './types.js';
 
 export type Database = Kysely<DatabaseSchema>;
 
+export interface DatabasePoolOptions {
+  idleTimeoutMillis?: number;
+  max?: number;
+  min?: number;
+}
+
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
 /**
@@ -30,12 +36,16 @@ function resolveSslConfig(connectionString: string): PoolConfig['ssl'] {
   };
 }
 
-export function createPool(connectionString: string): Pool {
+export function createPool(
+  connectionString: string,
+  options: DatabasePoolOptions = {},
+): Pool {
   const pool = new Pool({
     connectionString,
     ssl: resolveSslConfig(connectionString),
-    max: 10,
-    idleTimeoutMillis: 30_000,
+    max: options.max ?? 10,
+    min: options.min ?? 0,
+    idleTimeoutMillis: options.idleTimeoutMillis ?? 30_000,
     connectionTimeoutMillis: 10_000,
   });
 
@@ -51,8 +61,12 @@ export function createPool(connectionString: string): Pool {
   return pool;
 }
 
-export function createDatabase(connectionString: string): Database {
+export function createDatabaseFromPool(pool: Pool): Database {
   return new Kysely<DatabaseSchema>({
-    dialect: new PostgresDialect({ pool: createPool(connectionString) }),
+    dialect: new PostgresDialect({ pool }),
   });
+}
+
+export function createDatabase(connectionString: string): Database {
+  return createDatabaseFromPool(createPool(connectionString));
 }

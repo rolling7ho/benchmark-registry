@@ -26,4 +26,18 @@ describe('createPool', () => {
 
     await pool.end();
   });
+
+  it('applies serverless pool sizing overrides', async () => {
+    const pool = createPool('postgresql://localhost:5432/does-not-matter', {
+      idleTimeoutMillis: 5_000,
+      max: 4,
+      min: 1,
+    });
+
+    expect(pool.options.idleTimeoutMillis).toBe(5_000);
+    expect(pool.options.max).toBe(4);
+    expect(pool.options.min).toBe(1);
+
+    await pool.end();
+  });
 });
