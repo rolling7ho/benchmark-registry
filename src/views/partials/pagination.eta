@@ -1,13 +1,23 @@
 <div class="pagination" aria-label="Pagination">
-  <% if (it.total === 1) { %>
-    <span>Showing 1 record</span>
-  <% } else if (it.total > 1) { %>
-    <span>Showing records <%= it.start %>–<%= it.end %> of <%= it.total %></span>
-  <% } else { %>
-    <span>Showing 0 records</span>
-  <% } %>
-  <span class="pagination-links">
-    <% if (it.previousUrl !== null) { %><a href="<%= it.previousUrl %>">Previous</a><% } %>
-    <% if (it.nextUrl !== null) { %><a href="<%= it.nextUrl %>">Next</a><% } %>
-  </span>
+  <div class="pagination-summary">
+    <% if (it.total === 1) { %>
+      <span>Showing 1 record</span>
+    <% } else if (it.total > 1) { %>
+      <span>Showing records <%= it.start %>–<%= it.end %> of <%= it.total %></span>
+    <% } else { %>
+      <span>Showing 0 records</span>
+    <% } %>
+    <span>Page <%= it.page %> of <%= it.pageCount %></span>
+  </div>
+  <div class="pagination-controls">
+    <span class="pagination-links">
+      <% if (it.previousUrl !== null) { %><a href="<%= it.previousUrl %>">Previous</a><% } %>
+      <% if (it.nextUrl !== null) { %><a href="<%= it.nextUrl %>">Next</a><% } %>
+    </span>
+    <form class="page-jump" method="get" action="<%= it.formAction %>">
+      <% it.formParameters.forEach(function(parameter) { %><input type="hidden" name="<%= parameter.name %>" value="<%= parameter.value %>"><% }) %>
+      <label for="page-number">Page</label>
+      <input class="page-number-input" id="page-number" name="page" type="number" min="1" max="<%= it.pageCount %>" value="<%= it.page %>" inputmode="numeric" aria-label="Go to page">
+    </form>
+  </div>
 </div>

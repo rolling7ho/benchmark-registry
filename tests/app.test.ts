@@ -52,6 +52,14 @@ describe('public application routes without a database', () => {
     expect(response.body).toContain(
       'Table may be scrolled horizontally on narrow displays.',
     );
+    expect(response.body).toContain('Page 1 of 1');
+    expect(response.body).toContain('aria-label="Go to page"');
+    expect(response.body).toContain('type="number" min="1" max="1"');
+    expect(response.body).toContain('<a href="/privacy">Privacy</a>');
+    expect(response.body).toContain('<a href="/terms">Terms</a>');
+    expect(response.body).toContain(
+      '<a href="https://github.com/rolling7ho/benchmark-registry">GitHub</a>',
+    );
     expect(response.headers['cache-control']).toBe('no-cache');
   });
 
@@ -103,6 +111,15 @@ describe('public application routes without a database', () => {
     );
     expect(response.body).toContain('No records match the selected filters.');
     expect(response.body).toContain('Clear all filters');
+    expect(response.body).toContain(
+      '<input type="hidden" name="model" value="opnai-55">',
+    );
+    expect(response.body).toContain(
+      '<input type="hidden" name="benchmark" value="deepswe">',
+    );
+    expect(response.body).toContain(
+      '<input type="hidden" name="metric" value="overall">',
+    );
   });
 
   it.each(['/models', '/benchmarks', '/organizations', '/recent', '/sources'])(
@@ -111,6 +128,35 @@ describe('public application routes without a database', () => {
       expect((await app.inject({ method: 'GET', url })).statusCode).toBe(200);
     },
   );
+
+  it.each([
+    [
+      '/privacy',
+      'Privacy Policy | Benchmark Registry',
+      'We do not sell or rent personal information.',
+    ],
+    [
+      '/terms',
+      'Terms of Use | Benchmark Registry',
+      'does not constitute independent verification',
+    ],
+  ])('renders the public policy page at %s', async (url, title, statement) => {
+    const response = await app.inject({ method: 'GET', url });
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain(`<title>${title}</title>`);
+    expect(response.body).toContain('13 July 2026');
+    expect(response.body).toContain(statement);
+    expect(response.body).toContain('href="mailto:cowcow21@yahoo.com"');
+    if (url === '/privacy') {
+      expect(response.body).toContain('Vercel’s Privacy Notice');
+      expect(response.body).toContain(
+        'be indemnified for damages as provided by law',
+      );
+    }
+    expect(response.body).toContain(
+      `<link rel="canonical" href="https://benchmarkregistry.org${url}">`,
+    );
+  });
 
   it('renders all required documentation anchors and examples', async () => {
     const response = await app.inject({ method: 'GET', url: '/docs' });
@@ -218,6 +264,12 @@ describe('public application routes without a database', () => {
     });
     expect(pages.body).toContain(
       '<loc>https://benchmarkregistry.org/models</loc>',
+    );
+    expect(pages.body).toContain(
+      '<loc>https://benchmarkregistry.org/privacy</loc>',
+    );
+    expect(pages.body).toContain(
+      '<loc>https://benchmarkregistry.org/terms</loc>',
     );
   });
 

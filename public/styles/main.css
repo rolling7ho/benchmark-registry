@@ -265,12 +265,34 @@ pre {
 .pagination {
   display: flex;
   justify-content: space-between;
+  align-items: end;
   gap: 10px;
   margin: 5px 0 7px;
   font-size: 11px;
 }
+.pagination-summary {
+  display: grid;
+  gap: 2px;
+}
+.pagination-controls,
+.page-jump {
+  display: flex;
+  align-items: center;
+}
+.pagination-controls {
+  justify-content: flex-end;
+  gap: 10px;
+}
 .pagination-links a + a {
   margin-left: 10px;
+}
+.page-jump {
+  gap: 4px;
+  margin: 0;
+}
+.page-number-input {
+  width: 5.5em;
+  padding: 2px 4px;
 }
 .record-metadata {
   display: grid;
@@ -323,15 +345,22 @@ pre {
   border: 1px solid #aaa;
   padding: 8px;
 }
-footer {
+.site-footer {
   margin-top: 18px;
   color: #555;
   font-size: 11px;
 }
-footer hr {
+.site-footer hr {
   border: 0;
   border-top: 1px solid #888;
   margin: 0 0 6px;
+}
+.footer-links {
+  margin: 0 0 3px;
+}
+.footer-links span {
+  color: #777;
+  padding: 0 4px;
 }
 
 @media (max-width: 640px) {
@@ -370,6 +399,11 @@ footer hr {
   }
   .pagination {
     flex-direction: column;
+    align-items: stretch;
+  }
+  .pagination-controls {
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
   .leaderboard-filters {
     align-items: stretch;

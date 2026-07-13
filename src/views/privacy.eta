@@ -1,0 +1,51 @@
+<% layout('layout.eta') %>
+<article class="documentation">
+  <h1>Privacy Policy</h1>
+  <p><strong>Effective date:</strong> 13 July 2026</p>
+
+  <p>This Privacy Policy explains how Benchmark Registry processes information when you visit <a href="https://www.benchmarkregistry.org/">benchmarkregistry.org</a> or contact us. “Benchmark Registry,” “we,” and “us” refer to the operator of this website.</p>
+
+  <h2>Information we process</h2>
+  <p><strong>No user accounts.</strong> Benchmark Registry does not offer user accounts, public profiles, comments, or account-based personalization. You may browse and search the public registry without giving us your name or contact details.</p>
+  <p><strong>Technical information.</strong> When you access the website, our hosting provider may automatically process information needed to deliver, maintain, and secure the service. This may include your IP address, approximate location derived from your IP address, browser and device type, operating system, requested pages, referring page, request date and time, and diagnostic or security logs.</p>
+  <p><strong>Information you send us.</strong> If you contact us, we process your email address and the contents of your message, together with any information you choose to provide.</p>
+
+  <h2>Analytics and cookies</h2>
+  <p>As of the effective date, Benchmark Registry does not use a separate web analytics service, advertising trackers, or analytics cookies. The website may still generate ordinary infrastructure and security logs as described above. If our analytics practices materially change, we will update this policy.</p>
+
+  <h2>Why we process information</h2>
+  <p>We process information only as reasonably necessary to:</p>
+  <ul>
+    <li>provide, maintain, and secure the website;</li>
+    <li>detect, investigate, and prevent abuse, fraud, or technical failures;</li>
+    <li>respond to questions, correction requests, and other communications; and</li>
+    <li>comply with applicable law and protect legal rights.</li>
+  </ul>
+  <p>Where the Philippine Data Privacy Act of 2012 applies, processing is undertaken for a declared and legitimate purpose and on an applicable lawful basis, including legitimate interests, compliance with legal obligations, or consent where required.</p>
+
+  <h2>Service providers and disclosure</h2>
+  <p>The website is hosted on Vercel. Vercel processes technical information in connection with providing and protecting its hosting infrastructure. For more information, see <a href="https://vercel.com/legal/privacy-notice">Vercel’s Privacy Notice</a>.</p>
+  <p>Information may also be disclosed when required by law, legal process, or a valid government request, or when reasonably necessary to protect the website, its users, or others.</p>
+  <p>We do not sell or rent personal information. We do not disclose personal information for targeted advertising.</p>
+
+  <h2>International processing</h2>
+  <p>Vercel operates infrastructure in multiple jurisdictions. Technical information may therefore be processed outside the Philippines, subject to the provider’s contractual, privacy, and security arrangements and applicable law.</p>
+
+  <h2>Retention</h2>
+  <p>We retain correspondence only for as long as reasonably necessary to answer the inquiry, maintain an appropriate record, resolve disputes, or comply with law. Infrastructure and security logs are retained according to Vercel’s applicable retention practices. We do not set a more specific infrastructure-log period and will not represent one where it is not known to us.</p>
+
+  <h2>Data security</h2>
+  <p>We use reasonable administrative and technical measures intended to protect information. No internet transmission, hosting platform, or storage system can be guaranteed to be completely secure.</p>
+
+  <h2>Your privacy rights</h2>
+  <p>Subject to applicable law, you may have rights to be informed about processing; access or correct personal information; object to processing; request erasure or blocking; obtain data portability where applicable; be indemnified for damages as provided by law; and lodge a complaint with the <a href="https://privacy.gov.ph/">National Privacy Commission</a>. We may need to verify your identity before acting on a request.</p>
+
+  <h2>Third-party links</h2>
+  <p>Registry records and documentation link to third-party publications and websites. We do not control their privacy or security practices. Their own notices apply when you visit them.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>We may revise this policy to reflect changes in the website, our practices, or applicable law. The effective date at the top of this page identifies the current version.</p>
+
+  <h2>Contact</h2>
+  <p>For privacy questions or requests, email <a href="mailto:cowcow21@yahoo.com">cowcow21@yahoo.com</a>.</p>
+</article>

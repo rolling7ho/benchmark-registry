@@ -62,8 +62,12 @@ interface PaginationView {
   start: number;
   end: number;
   total: number;
+  page: number;
+  pageCount: number;
   previousUrl: string | null;
   nextUrl: string | null;
+  formAction: string;
+  formParameters: Array<{ name: string; value: string }>;
 }
 
 const EMPTY_PAGE: RegistryRecordPage = {
@@ -173,12 +177,13 @@ function pagination(
   const start =
     result.total === 0 ? 0 : (result.page - 1) * result.pageSize + 1;
   const end = Math.min(result.page * result.pageSize, result.total);
+  const formParameters = new URLSearchParams();
+  if (query !== undefined) formParameters.set('q', query);
+  for (const [key, value] of Object.entries(additionalParameters)) {
+    if (value !== '') formParameters.set(key, value);
+  }
   const url = (page: number): string => {
-    const parameters = new URLSearchParams();
-    if (query !== undefined) parameters.set('q', query);
-    for (const [key, value] of Object.entries(additionalParameters)) {
-      if (value !== '') parameters.set(key, value);
-    }
+    const parameters = new URLSearchParams(formParameters);
     parameters.set('page', page.toString());
     return `${pathname}?${parameters.toString()}`;
   };
@@ -186,8 +191,15 @@ function pagination(
     start,
     end,
     total: result.total,
+    page: result.page,
+    pageCount: Math.max(1, Math.ceil(result.total / result.pageSize)),
     previousUrl: result.page > 1 ? url(result.page - 1) : null,
     nextUrl: end < result.total ? url(result.page + 1) : null,
+    formAction: pathname,
+    formParameters: Array.from(formParameters, ([name, value]) => ({
+      name,
+      value,
+    })),
   };
 }
 
@@ -755,6 +767,32 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
     }),
   );
 
+  app.get('/privacy', (_request, reply) =>
+    reply.view('privacy.eta', {
+      title: 'Privacy Policy — Benchmark Registry',
+      seo: createPageSeo({
+        title: 'Privacy Policy | Benchmark Registry',
+        description:
+          'How Benchmark Registry processes technical visitor information, correspondence, and infrastructure data.',
+        path: '/privacy',
+      }),
+      query: '',
+    }),
+  );
+
+  app.get('/terms', (_request, reply) =>
+    reply.view('terms.eta', {
+      title: 'Terms of Use — Benchmark Registry',
+      seo: createPageSeo({
+        title: 'Terms of Use | Benchmark Registry',
+        description:
+          'Terms governing use of Benchmark Registry and its archival records of publicly reported benchmark measurements.',
+        path: '/terms',
+      }),
+      query: '',
+    }),
+  );
+
   app.get('/robots.txt', (_request, reply) =>
     reply
       .type('text/plain; charset=utf-8')
@@ -806,6 +844,8 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
             '/recent',
             '/sources',
             '/docs',
+            '/privacy',
+            '/terms',
           ].map((path) => ({ path })),
         ),
       ),

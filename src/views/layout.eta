@@ -31,8 +31,15 @@
       <%~ include('partials/search-form.eta', { query: it.query ?? '' }) %>
       <%~ include('partials/nav.eta') %>
       <%~ it.body %>
-      <footer>
+      <footer class="site-footer">
         <hr>
+        <p class="footer-links" aria-label="Legal and project links">
+          <a href="/privacy">Privacy</a>
+          <span aria-hidden="true">·</span>
+          <a href="/terms">Terms</a>
+          <span aria-hidden="true">·</span>
+          <a href="https://github.com/rolling7ho/benchmark-registry">GitHub</a>
+        </p>
         <small>Benchmark Registry — Registry records are provided for reference purposes.</small>
       </footer>
     </main>
