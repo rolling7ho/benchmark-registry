@@ -52,9 +52,12 @@ describe('public application routes without a database', () => {
     });
     expect(response.statusCode).toBe(200);
     expect(response.headers['content-type']).toContain('image/svg+xml');
-    expect(response.body).toContain('fill="#f5f3eb"');
+    expect(response.body).not.toContain('fill="#f5f3eb"');
+    expect(response.body).toContain('fill="#fff"');
     expect(response.body).toContain('viewBox="0 0 16 16"');
-    expect(response.body).toContain('d="M1 7h3v7H1zm5-4h3v11H6zm5 2h3v9h-3z"');
+    expect(response.body).toContain(
+      'd="M3 7h1.5v7H3zM7.25 3h1.5v11h-1.5zM11.5 5H13v9h-1.5z"',
+    );
   });
 
   it('serves readable development assets without immutable caching', async () => {
