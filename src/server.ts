@@ -1,4 +1,4 @@
-import { createApp } from './app.js';
+import { createApp } from './application.js';
 import { loadEnvironment } from './config/env.js';
 import { createDatabase } from './db/database.js';
 

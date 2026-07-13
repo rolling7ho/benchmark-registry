@@ -1,7 +1,7 @@
 import { runner } from 'node-pg-migrate';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createApp } from '../../src/app.js';
+import { createApp } from '../../src/application.js';
 import { createDatabase, type Database } from '../../src/db/database.js';
 import { getRegistryRecords } from '../../src/db/registry-records.js';
 import { seedTestData } from '../../src/db/seed-test-data.js';
@@ -146,7 +146,7 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
       });
       expect(root.statusCode).toBe(200);
       expect(root.body).toContain('Record No.');
-      expect(root.body).toContain('Benchmark Records Leaderboard');
+      expect(root.body).not.toContain('Benchmark Records Leaderboard');
       expect(root.body.indexOf('88.1%')).toBeLessThan(
         root.body.indexOf('69.2'),
       );

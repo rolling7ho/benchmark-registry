@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { createApp } from '../src/app.js';
+import { createApp } from '../src/application.js';
 
 describe('public application routes without a database', () => {
   let app: FastifyInstance;
@@ -20,7 +20,7 @@ describe('public application routes without a database', () => {
     expect(response.body).toContain('BENCHMARK REGISTRY');
     expect(response.body).toContain('action="/search"');
     expect(response.body).toContain('Record No.');
-    expect(response.body).toContain('Benchmark Records Leaderboard');
+    expect(response.body).not.toContain('Benchmark Records Leaderboard');
     expect(response.body).toContain('name="benchmark"');
     expect(response.body).toContain('name="metric"');
     expect(response.body).toContain('name="order"');

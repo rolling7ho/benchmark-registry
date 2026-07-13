@@ -180,7 +180,7 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
     return reply.view('registry-page.eta', {
       title: 'Benchmark Registry',
       query: '',
-      heading: 'Benchmark Records Leaderboard',
+      heading: null,
       databaseUpdate: formatDatabaseUpdate(update),
       records: result.records,
       emptyMessage: 'No benchmark records are currently available.',
