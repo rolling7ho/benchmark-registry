@@ -11,7 +11,7 @@ describe('candidate validation without canonical mutation', () => {
       proposedBenchmarkSlug: null,
       proposedMetricSlug: null,
       scoreDisplay: null,
-      scoreValue: -1,
+      scoreValue: Number.POSITIVE_INFINITY,
       evaluationDate: null,
       reportType: 'UNKNOWN',
       evidenceText: null,

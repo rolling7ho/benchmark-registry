@@ -67,6 +67,7 @@ export type RegistryRecordFilter =
       order: LeaderboardOrder;
     }
   | { kind: 'EXACT_RECORD'; recordId: string }
+  | { kind: 'RECORD_PREFIX'; recordPrefix: string }
   | { kind: 'MODEL'; modelInternalId: string }
   | { kind: 'BENCHMARK'; benchmarkInternalId: string }
   | { kind: 'BENCHMARK_VERSION'; benchmarkVersionInternalId: string }
@@ -184,6 +185,12 @@ function applyFilter(
     }
     case 'EXACT_RECORD':
       return query.where('benchmark_records.record_id', '=', filter.recordId);
+    case 'RECORD_PREFIX':
+      return query.where(
+        'benchmark_records.record_id',
+        'like',
+        `${filter.recordPrefix}-%`,
+      );
     case 'MODEL':
       return query
         .where('benchmark_records.model_id', '=', filter.modelInternalId)

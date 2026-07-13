@@ -5,7 +5,7 @@ export const MAX_REDIRECTS = 5;
 export const RETRIEVAL_TIMEOUT_MS = 30_000;
 export const MAX_CHUNK_TEXT_LENGTH = 40_000;
 export const INGESTION_USER_AGENT =
-  'BenchmarkRegistrySourceIngestion/1.0 (+https://benchmarkregistry.org)';
+  'BenchmarkRegistrySourceIngestion/1.0 (+https://www.benchmarkregistry.org)';
 
 export const SUPPORTED_CONTENT_TYPES = [
   'text/html',

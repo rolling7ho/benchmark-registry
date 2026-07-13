@@ -28,7 +28,7 @@ describe('public application routes without a database', () => {
     expect(response.body).toContain('name="order"');
     expect(response.body).toContain('Descending');
     expect(response.body).toContain('not necessarily comparable');
-    expect(response.body).toContain('<th>Rank</th>');
+    expect(response.body).not.toContain('<th>Rank</th>');
     expect(response.body.indexOf('<th>Source</th>')).toBeLessThan(
       response.body.indexOf('sort=model-id'),
     );
@@ -37,7 +37,7 @@ describe('public application routes without a database', () => {
       '<meta name="viewport" content="width=device-width, initial-scale=1">',
     );
     expect(response.body).toContain(
-      '<link rel="canonical" href="https://benchmarkregistry.org/">',
+      '<link rel="canonical" href="https://www.benchmarkregistry.org/">',
     );
     expect(response.body).toContain(
       '<meta name="robots" content="index,follow">',
@@ -156,7 +156,7 @@ describe('public application routes without a database', () => {
       );
     }
     expect(response.body).toContain(
-      `<link rel="canonical" href="https://benchmarkregistry.org${url}">`,
+      `<link rel="canonical" href="https://www.benchmarkregistry.org${url}">`,
     );
   });
 
@@ -223,6 +223,32 @@ describe('public application routes without a database', () => {
     expect(response.statusCode).toBe(400);
   });
 
+  it('rejects repeated scalar query parameters without returning a 500', async () => {
+    for (const url of [
+      '/search?q=one&q=two',
+      '/search?page=1&page=2',
+      '/?model=one&model=two',
+      '/?sort=score&sort=model',
+    ]) {
+      const response = await app.inject({ method: 'GET', url });
+      expect(response.statusCode).toBe(400);
+      expect(response.body).toContain('Query parameters must have one value.');
+      expect(response.body).not.toContain('trim is not a function');
+    }
+  });
+
+  it('does not expose files outside the static public root', async () => {
+    for (const url of [
+      '/public/../.env',
+      '/public/%2e%2e/.env',
+      '/public/%2e%2e/server.js.map',
+    ]) {
+      const response = await app.inject({ method: 'GET', url });
+      expect(response.statusCode).toBe(404);
+      expect(response.body).not.toContain('DATABASE_URL');
+    }
+  });
+
   it('normalizes invalid pages to page one', async () => {
     const response = await app.inject({ method: 'GET', url: '/?page=-2' });
     expect(response.statusCode).toBe(200);
@@ -235,10 +261,11 @@ describe('public application routes without a database', () => {
     expect(response.body).toContain('404 — Record or page not found');
   });
 
-  it('reports simple health status', async () => {
+  it('reports unavailable when database readiness cannot be established', async () => {
     const response = await app.inject({ method: 'GET', url: '/health' });
-    expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ status: 'ok' });
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toEqual({ status: 'unavailable' });
+    expect(response.headers['cache-control']).toContain('no-store');
   });
 
   it('publishes crawl rules and production-only sitemap URLs', async () => {
@@ -247,14 +274,14 @@ describe('public application routes without a database', () => {
     expect(robots.body).toContain('Allow: /');
     expect(robots.body).toContain('Disallow: /admin');
     expect(robots.body).toContain(
-      'Sitemap: https://benchmarkregistry.org/sitemap.xml',
+      'Sitemap: https://www.benchmarkregistry.org/sitemap.xml',
     );
 
     const index = await app.inject({ method: 'GET', url: '/sitemap.xml' });
     expect(index.statusCode).toBe(200);
     expect(index.headers['content-type']).toContain('application/xml');
     expect(index.body).toContain(
-      'https://benchmarkregistry.org/sitemaps/models.xml',
+      'https://www.benchmarkregistry.org/sitemaps/models.xml',
     );
     expect(index.body).not.toMatch(
       /localhost|vercel\.app|supabase|staging|preview/i,
@@ -265,16 +292,16 @@ describe('public application routes without a database', () => {
       url: '/sitemaps/pages.xml',
     });
     expect(pages.body).toContain(
-      '<loc>https://benchmarkregistry.org/models</loc>',
+      '<loc>https://www.benchmarkregistry.org/models</loc>',
     );
     expect(pages.body).toContain(
-      '<loc>https://benchmarkregistry.org/privacy</loc>',
+      '<loc>https://www.benchmarkregistry.org/privacy</loc>',
     );
     expect(pages.body).toContain(
-      '<loc>https://benchmarkregistry.org/terms</loc>',
+      '<loc>https://www.benchmarkregistry.org/terms</loc>',
     );
     expect(pages.body).toContain(
-      '<loc>https://benchmarkregistry.org/feedback</loc>',
+      '<loc>https://www.benchmarkregistry.org/feedback</loc>',
     );
   });
 
@@ -288,7 +315,7 @@ describe('public application routes without a database', () => {
       '<meta name="robots" content="noindex,follow">',
     );
     expect(response.body).toContain(
-      '<link rel="canonical" href="https://benchmarkregistry.org/search">',
+      '<link rel="canonical" href="https://www.benchmarkregistry.org/search">',
     );
   });
 });

@@ -31,6 +31,9 @@ describe('administrative registry validation', () => {
     expect(() => canonicalHttpUrl('ftp://example.com/report')).toThrow(
       'Invalid source URL',
     );
+    expect(() =>
+      canonicalHttpUrl('https://user:password@example.com/report'),
+    ).toThrow('Invalid source URL');
     expect(() => canonicalHttpUrl('not a url')).toThrow('Invalid source URL');
   });
 

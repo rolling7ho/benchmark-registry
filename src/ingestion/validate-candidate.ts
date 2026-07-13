@@ -46,10 +46,7 @@ export async function validateCandidate(
     errors.push('Missing evidence location.');
   if (!REPORT_TYPES.includes(input.reportType))
     errors.push('Invalid report type.');
-  if (
-    input.scoreValue !== null &&
-    (!Number.isFinite(input.scoreValue) || input.scoreValue <= 0)
-  )
+  if (input.scoreValue !== null && !Number.isFinite(input.scoreValue))
     errors.push('Invalid score value.');
   if (input.evaluationDate === null) warnings.push('Evaluation date unknown.');
   if (input.scoreValue === null) warnings.push('Numeric score absent.');

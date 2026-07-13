@@ -25,6 +25,7 @@ const environmentSchema = z
       ),
     ADMIN_USERNAME: z.string().min(1).max(128).optional(),
     ADMIN_PASSWORD: z.string().min(12).max(1024).optional(),
+    FEEDBACK_RATE_LIMIT_SECRET: z.string().min(32).max(1024).optional(),
   })
   .superRefine((environment, context) => {
     if (

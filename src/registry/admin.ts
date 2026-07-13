@@ -25,6 +25,7 @@ import type {
   SourcesTable,
 } from '../db/types.js';
 import { allocateBenchmarkRecordIdentifierInTransaction } from '../identifiers/allocate-record-id.js';
+import { formatBenchmarkRecordIdentifier } from '../identifiers/record-id.js';
 import {
   generateModelIdentifier,
   validateModelIdentifier,
@@ -581,7 +582,11 @@ export async function listAdministrativeMetrics(db: Database): Promise<
 export function canonicalHttpUrl(value: string): string {
   try {
     const url = new URL(value);
-    if (url.protocol !== 'http:' && url.protocol !== 'https:')
+    if (
+      (url.protocol !== 'http:' && url.protocol !== 'https:') ||
+      url.username !== '' ||
+      url.password !== ''
+    )
       throw new Error();
     return url.toString();
   } catch {
@@ -1286,6 +1291,22 @@ export async function validateRegistry(
       'organizations.br_namespace as brNamespace',
     ])
     .execute();
+  const modelIdsByOfficialName = new Map<string, string[]>();
+  for (const model of models) {
+    const key = model.official_name.trim().toLowerCase();
+    const identifiers = modelIdsByOfficialName.get(key) ?? [];
+    identifiers.push(model.model_id);
+    modelIdsByOfficialName.set(key, identifiers);
+  }
+  for (const [officialName, identifiers] of modelIdsByOfficialName) {
+    if (identifiers.length > 1) {
+      add(
+        'ERROR',
+        `models:${officialName}`,
+        `Official model name resolves to multiple Model Identifiers: ${identifiers.sort().join(', ')}.`,
+      );
+    }
+  }
   for (const model of models) {
     try {
       const parsed = validateModelIdentifier(model.model_id);
@@ -1400,6 +1421,7 @@ export async function validateRegistry(
   for (const record of records) {
     if (
       record.modelExists === null ||
+      record.recordPrefix === null ||
       record.benchmarkExists === null ||
       record.metricExists === null ||
       record.sourceExists === null
@@ -1407,12 +1429,30 @@ export async function validateRegistry(
       add('ERROR', record.recordId, 'Broken required foreign relationship.');
       continue;
     }
-    const expected = `${record.recordPrefix}-${record.sequenceNumber.toString().padStart(3, '0')}`;
-    if (record.recordId !== expected)
+    const identifierMatch = /^(BR-\d{3}[A-Z0-9]+)-(\d{3})$/.exec(
+      record.recordId,
+    );
+    let identifierValid = identifierMatch !== null;
+    if (identifierMatch !== null) {
+      try {
+        const allocatedPrefix = validateRecordPrefix(identifierMatch[1]!);
+        const canonicalPrefix = validateRecordPrefix(record.recordPrefix);
+        identifierValid =
+          allocatedPrefix.providerSlug === canonicalPrefix.providerSlug &&
+          Number(identifierMatch[2]) === record.sequenceNumber &&
+          formatBenchmarkRecordIdentifier(
+            identifierMatch[1]!,
+            record.sequenceNumber,
+          ) === record.recordId;
+      } catch {
+        identifierValid = false;
+      }
+    }
+    if (!identifierValid)
       add(
         'ERROR',
         record.recordId,
-        `Record sequence or prefix mismatch; expected ${expected}.`,
+        'Record identifier, sequence, or provider namespace is inconsistent.',
       );
     if (record.sequenceNumber <= 0 || record.sequenceNumber > 999)
       add(
@@ -1543,28 +1583,57 @@ export async function validateRegistry(
     if (!EVALUATOR_TYPES.includes(evaluator.evaluator_type))
       add('ERROR', evaluator.slug, 'Invalid evaluator type.');
 
-  const contextualRecords = await db
-    .selectFrom('benchmark_records')
-    .innerJoin(
-      'benchmark_versions',
-      'benchmark_versions.id',
-      'benchmark_records.benchmark_version_id',
-    )
-    .leftJoin(
-      'model_snapshots',
-      'model_snapshots.id',
-      'benchmark_records.model_snapshot_id',
-    )
-    .select([
-      'benchmark_records.id',
-      'benchmark_records.record_id as recordId',
-      'benchmark_records.model_id as modelId',
-      'benchmark_records.benchmark_id as benchmarkId',
-      'benchmark_records.source_id as sourceId',
-      'benchmark_versions.benchmark_id as versionBenchmarkId',
-      'model_snapshots.model_id as snapshotModelId',
-    ])
-    .execute();
+  const [contextualRecords, primarySourceRows, creationEventRows] =
+    await Promise.all([
+      db
+        .selectFrom('benchmark_records')
+        .innerJoin(
+          'benchmark_versions',
+          'benchmark_versions.id',
+          'benchmark_records.benchmark_version_id',
+        )
+        .leftJoin(
+          'model_snapshots',
+          'model_snapshots.id',
+          'benchmark_records.model_snapshot_id',
+        )
+        .select([
+          'benchmark_records.id',
+          'benchmark_records.record_id as recordId',
+          'benchmark_records.model_id as modelId',
+          'benchmark_records.benchmark_id as benchmarkId',
+          'benchmark_records.source_id as sourceId',
+          'benchmark_versions.benchmark_id as versionBenchmarkId',
+          'model_snapshots.model_id as snapshotModelId',
+        ])
+        .execute(),
+      db
+        .selectFrom('benchmark_record_sources')
+        .select(['benchmark_record_id as recordId', 'source_id as sourceId'])
+        .where('source_role', '=', 'PRIMARY')
+        .execute(),
+      db
+        .selectFrom('record_provenance_events')
+        .select('benchmark_record_id as recordId')
+        .where('event_type', 'in', [
+          'CREATED_MANUALLY',
+          'CREATED_FROM_INGESTION',
+        ])
+        .execute(),
+    ]);
+  const primarySourcesByRecord = new Map<string, string[]>();
+  for (const source of primarySourceRows) {
+    const sources = primarySourcesByRecord.get(source.recordId) ?? [];
+    sources.push(source.sourceId);
+    primarySourcesByRecord.set(source.recordId, sources);
+  }
+  const creationEventCountByRecord = new Map<string, number>();
+  for (const event of creationEventRows) {
+    creationEventCountByRecord.set(
+      event.recordId,
+      (creationEventCountByRecord.get(event.recordId) ?? 0) + 1,
+    );
+  }
   for (const record of contextualRecords) {
     if (record.benchmarkId !== record.versionBenchmarkId)
       add(
@@ -1581,33 +1650,14 @@ export async function validateRegistry(
         record.recordId,
         'Model snapshot belongs to a different canonical model.',
       );
-    const [primarySources, creation] = await Promise.all([
-      db
-        .selectFrom('benchmark_record_sources')
-        .select('source_id as sourceId')
-        .where('benchmark_record_id', '=', record.id)
-        .where('source_role', '=', 'PRIMARY')
-        .execute(),
-      db
-        .selectFrom('record_provenance_events')
-        .select((eb) => eb.fn.countAll<string>().as('count'))
-        .where('benchmark_record_id', '=', record.id)
-        .where('event_type', 'in', [
-          'CREATED_MANUALLY',
-          'CREATED_FROM_INGESTION',
-        ])
-        .executeTakeFirstOrThrow(),
-    ]);
-    if (
-      primarySources.length !== 1 ||
-      primarySources[0]?.sourceId !== record.sourceId
-    )
+    const primarySources = primarySourcesByRecord.get(record.id) ?? [];
+    if (primarySources.length !== 1 || primarySources[0] !== record.sourceId)
       add(
         'ERROR',
         record.recordId,
         'Record must have exactly one primary source relationship matching source_id.',
       );
-    if (Number(creation.count) < 1)
+    if ((creationEventCountByRecord.get(record.id) ?? 0) < 1)
       add('ERROR', record.recordId, 'Record has no provenance creation event.');
   }
   for (const event of await db
@@ -1650,8 +1700,7 @@ function validOptionalDate(value: string | null | undefined): string | null {
 
 function validOptionalScore(value: number | null | undefined): number | null {
   if (value === null || value === undefined) return null;
-  if (!Number.isFinite(value) || value <= 0)
-    throw new Error('Invalid score value.');
+  if (!Number.isFinite(value)) throw new Error('Invalid score value.');
   return value;
 }
 

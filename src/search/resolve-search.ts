@@ -9,7 +9,7 @@ export type SearchResolution =
   | {
       kind: 'RECORD_PREFIX';
       displayQuery: string;
-      modelInternalId: string;
+      recordPrefix: string;
     }
   | { kind: 'MODEL'; displayQuery: string; modelInternalId: string }
   | {
@@ -30,39 +30,12 @@ export type SearchResolution =
   | { kind: 'METRIC'; displayQuery: string; metricInternalId: string }
   | { kind: 'GENERAL'; displayQuery: string; normalizedQuery: string };
 
-async function uniqueModelMatch(
-  db: Database,
-  column: 'official_name' | 'model_id',
-  value: string,
-): Promise<string | null> {
-  const rows = await db
-    .selectFrom('models')
-    .select('id')
-    .where(sql`lower(${sql.ref(column)})`, '=', value.toLowerCase())
-    .limit(2)
-    .execute();
-  return rows.length === 1 ? rows[0]!.id : null;
-}
-
-async function uniqueAliasMatch(
-  db: Database,
-  column: 'normalized_alias' | 'compact_alias',
-  value: string,
-): Promise<
-  | { kind: 'NONE' }
-  | { kind: 'UNIQUE'; modelInternalId: string }
-  | { kind: 'AMBIGUOUS' }
-> {
-  const rows = await db
-    .selectFrom('model_aliases')
-    .select('model_id')
-    .distinct()
-    .where(column, '=', value)
-    .limit(2)
-    .execute();
-  if (rows.length === 0) return { kind: 'NONE' };
-  if (rows.length > 1) return { kind: 'AMBIGUOUS' };
-  return { kind: 'UNIQUE', modelInternalId: rows[0]!.model_id };
+interface ExactSearchMatch {
+  priority: number;
+  kind: string;
+  entity_id: string;
+  matched_value: string | null;
+  alias_type: string | null;
 }
 
 export async function resolveSearch(
@@ -83,147 +56,158 @@ export async function resolveSearch(
     return { kind: 'EXACT_RECORD', displayQuery, recordId: record.record_id };
   }
 
-  const prefix = await db
-    .selectFrom('models')
-    .select('id')
-    .where('record_prefix', '=', identifierCandidate)
-    .executeTakeFirst();
-  if (prefix !== undefined) {
-    return {
-      kind: 'RECORD_PREFIX',
-      displayQuery,
-      modelInternalId: prefix.id,
-    };
-  }
+  // All non-record exact resolution candidates are fetched in one database
+  // round trip. The priority values preserve the documented resolution order
+  // while avoiding the former worst-case chain of ten sequential queries.
+  const matches = await sql<ExactSearchMatch>`
+    WITH exact_matches AS (
+      SELECT 10 AS priority, 'RECORD_PREFIX' AS kind,
+             models.id::text AS entity_id,
+             models.record_prefix AS matched_value,
+             NULL::text AS alias_type
+      FROM models
+      WHERE models.record_prefix = ${identifierCandidate}
 
-  const modelIdentifier = await uniqueModelMatch(
-    db,
-    'model_id',
-    identifierCandidate,
-  );
-  if (modelIdentifier !== null) {
-    return { kind: 'MODEL', displayQuery, modelInternalId: modelIdentifier };
-  }
+      UNION ALL
+      SELECT 20, 'MODEL', models.id::text, models.model_id, NULL::text
+      FROM models
+      WHERE lower(models.model_id) = ${normalizedQuery}
 
-  const officialName = await uniqueModelMatch(
-    db,
-    'official_name',
-    normalizedQuery,
-  );
-  if (officialName !== null) {
-    return { kind: 'MODEL', displayQuery, modelInternalId: officialName };
-  }
+      UNION ALL
+      SELECT 30, 'MODEL', models.id::text, models.official_name, NULL::text
+      FROM models
+      WHERE lower(models.official_name) = ${normalizedQuery}
 
-  const normalizedAlias = await uniqueAliasMatch(
-    db,
-    'normalized_alias',
-    normalizedQuery,
-  );
-  if (normalizedAlias.kind === 'AMBIGUOUS') {
-    return { kind: 'GENERAL', displayQuery, normalizedQuery };
-  }
-  if (normalizedAlias.kind === 'UNIQUE') {
-    return {
-      kind: 'MODEL',
-      displayQuery,
-      modelInternalId: normalizedAlias.modelInternalId,
-    };
-  }
+      UNION ALL
+      SELECT 40, 'ALIAS', model_aliases.model_id::text,
+             model_aliases.alias, model_aliases.alias_type
+      FROM model_aliases
+      WHERE model_aliases.normalized_alias = ${normalizedQuery}
 
-  const compactAlias = await uniqueAliasMatch(
-    db,
-    'compact_alias',
-    compactSearchText(query),
-  );
-  if (compactAlias.kind === 'UNIQUE') {
-    return {
-      kind: 'MODEL',
-      displayQuery,
-      modelInternalId: compactAlias.modelInternalId,
-    };
-  }
+      UNION ALL
+      SELECT 50, 'ALIAS', model_aliases.model_id::text,
+             model_aliases.alias, model_aliases.alias_type
+      FROM model_aliases
+      WHERE model_aliases.compact_alias = ${compactSearchText(query)}
 
-  const benchmarkVersions = await db
-    .selectFrom('benchmark_versions')
-    .innerJoin('benchmarks', 'benchmarks.id', 'benchmark_versions.benchmark_id')
-    .select('benchmark_versions.id')
-    .where((eb) =>
-      eb.or([
-        eb(
-          sql`lower(benchmark_versions.canonical_reference)`,
-          '=',
-          normalizedQuery,
-        ),
-        eb(
-          sql`lower(benchmarks.name || ' ' || coalesce(benchmark_versions.variant_name, benchmark_versions.version_label, ''))`,
-          '=',
-          normalizedQuery,
-        ),
-      ]),
+      UNION ALL
+      SELECT 60, 'BENCHMARK_VERSION', benchmark_versions.id::text,
+             benchmark_versions.canonical_reference, NULL::text
+      FROM benchmark_versions
+      INNER JOIN benchmarks
+        ON benchmarks.id = benchmark_versions.benchmark_id
+      WHERE lower(benchmark_versions.canonical_reference) = ${normalizedQuery}
+         OR lower(
+              benchmarks.name || ' ' ||
+              coalesce(
+                benchmark_versions.variant_name,
+                benchmark_versions.version_label,
+                ''
+              )
+            ) = ${normalizedQuery}
+
+      UNION ALL
+      SELECT 70, 'BENCHMARK', benchmarks.id::text,
+             benchmarks.slug, NULL::text
+      FROM benchmarks
+      WHERE lower(benchmarks.name) = ${normalizedQuery}
+         OR lower(benchmarks.slug) = ${normalizedQuery}
+
+      UNION ALL
+      SELECT 80, 'ORGANIZATION', organizations.id::text,
+             organizations.slug, NULL::text
+      FROM organizations
+      WHERE lower(organizations.name) = ${normalizedQuery}
+         OR lower(organizations.slug) = ${normalizedQuery}
+         OR lower(organizations.provider_prefix) = ${normalizedQuery}
+
+      UNION ALL
+      SELECT 90, 'METRIC', metrics.id::text, metrics.slug, NULL::text
+      FROM metrics
+      WHERE lower(metrics.name) = ${normalizedQuery}
+         OR lower(metrics.slug) = ${normalizedQuery}
     )
-    .limit(2)
-    .execute();
-  if (benchmarkVersions.length === 1) {
-    return {
-      kind: 'BENCHMARK_VERSION',
-      displayQuery,
-      benchmarkVersionInternalId: benchmarkVersions[0]!.id,
-    };
-  }
+    SELECT priority, kind, entity_id, matched_value, alias_type
+    FROM exact_matches
+    ORDER BY priority, entity_id
+  `.execute(db);
 
-  const benchmark = await db
-    .selectFrom('benchmarks')
-    .select('id')
-    .where((eb) =>
-      eb.or([
-        eb(sql`lower(name)`, '=', normalizedQuery),
-        eb(sql`lower(slug)`, '=', normalizedQuery),
-      ]),
-    )
-    .executeTakeFirst();
-  if (benchmark !== undefined) {
-    return {
-      kind: 'BENCHMARK',
-      displayQuery,
-      benchmarkInternalId: benchmark.id,
-    };
+  const grouped = new Map<number, ExactSearchMatch[]>();
+  for (const match of matches.rows) {
+    const priorityMatches = grouped.get(match.priority) ?? [];
+    priorityMatches.push(match);
+    grouped.set(match.priority, priorityMatches);
   }
-
-  const organization = await db
-    .selectFrom('organizations')
-    .select('id')
-    .where((eb) =>
-      eb.or([
-        eb(sql`lower(name)`, '=', normalizedQuery),
-        eb(sql`lower(slug)`, '=', normalizedQuery),
-        eb(sql`lower(provider_prefix)`, '=', normalizedQuery),
-      ]),
-    )
-    .executeTakeFirst();
-  if (organization !== undefined) {
-    return {
-      kind: 'ORGANIZATION',
-      displayQuery,
-      organizationInternalId: organization.id,
-    };
-  }
-
-  const metric = await db
-    .selectFrom('metrics')
-    .select('id')
-    .where((eb) =>
-      eb.or([
-        eb(sql`lower(name)`, '=', normalizedQuery),
-        eb(sql`lower(slug)`, '=', normalizedQuery),
-      ]),
-    )
-    .executeTakeFirst();
-  if (metric !== undefined) {
-    return {
-      kind: 'METRIC',
-      displayQuery,
-      metricInternalId: metric.id,
-    };
+  for (const priorityMatches of grouped.values()) {
+    const distinctEntities = new Set(
+      priorityMatches.map((match) => match.entity_id),
+    );
+    const first = priorityMatches[0]!;
+    if (
+      first.kind === 'MODEL' ||
+      first.kind === 'ALIAS' ||
+      first.kind === 'BENCHMARK_VERSION'
+    ) {
+      if (distinctEntities.size !== 1) {
+        if (first.kind === 'BENCHMARK_VERSION') continue;
+        return { kind: 'GENERAL', displayQuery, normalizedQuery };
+      }
+    }
+    switch (first.kind) {
+      case 'RECORD_PREFIX':
+        return {
+          kind: 'RECORD_PREFIX',
+          displayQuery,
+          recordPrefix: first.matched_value!,
+        };
+      case 'MODEL':
+        return {
+          kind: 'MODEL',
+          displayQuery,
+          modelInternalId: first.entity_id,
+        };
+      case 'ALIAS': {
+        const legacyPrefix = priorityMatches.find(
+          (match) => match.alias_type === 'LEGACY_RECORD_PREFIX',
+        );
+        if (legacyPrefix !== undefined) {
+          return {
+            kind: 'RECORD_PREFIX',
+            displayQuery,
+            recordPrefix: legacyPrefix.matched_value!.toUpperCase(),
+          };
+        }
+        return {
+          kind: 'MODEL',
+          displayQuery,
+          modelInternalId: first.entity_id,
+        };
+      }
+      case 'BENCHMARK_VERSION':
+        return {
+          kind: 'BENCHMARK_VERSION',
+          displayQuery,
+          benchmarkVersionInternalId: first.entity_id,
+        };
+      case 'BENCHMARK':
+        return {
+          kind: 'BENCHMARK',
+          displayQuery,
+          benchmarkInternalId: first.entity_id,
+        };
+      case 'ORGANIZATION':
+        return {
+          kind: 'ORGANIZATION',
+          displayQuery,
+          organizationInternalId: first.entity_id,
+        };
+      case 'METRIC':
+        return {
+          kind: 'METRIC',
+          displayQuery,
+          metricInternalId: first.entity_id,
+        };
+    }
   }
 
   return { kind: 'GENERAL', displayQuery, normalizedQuery };

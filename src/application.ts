@@ -15,7 +15,12 @@ import { registerDynamicResponseCaching } from './plugins/response-cache.js';
 import { registerSecurityHeaders } from './plugins/security.js';
 import indexRoutes from './routes/index.js';
 import feedbackRoutes from './routes/feedback.js';
+import {
+  createDatabaseRequestRateLimiter,
+  type RequestRateLimiter,
+} from './security/request-rate-limit.js';
 import { createAssetPath } from './web/assets.js';
+import { createPageSeo } from './web/seo.js';
 
 export interface CreateAppOptions {
   database?: Database;
@@ -24,6 +29,8 @@ export interface CreateAppOptions {
   runtimeDirectory?: string;
   adminAuth?: AdminAuthConfig;
   feedbackStore?: FeedbackStore;
+  requestRateLimiter?: RequestRateLimiter;
+  rateLimitSecret?: string;
 }
 
 export function createApp(options: CreateAppOptions = {}): FastifyInstance {
@@ -53,6 +60,42 @@ export function createApp(options: CreateAppOptions = {}): FastifyInstance {
   registerCompression(app, production);
   registerDynamicResponseCaching(app);
 
+  app.setErrorHandler((error, _request, reply) => {
+    const errorStatus =
+      typeof error === 'object' &&
+      error !== null &&
+      'statusCode' in error &&
+      typeof error.statusCode === 'number'
+        ? error.statusCode
+        : undefined;
+    const statusCode =
+      typeof errorStatus === 'number' && errorStatus >= 400 && errorStatus < 500
+        ? errorStatus
+        : 500;
+    if (statusCode >= 500) {
+      app.log.error(error, 'Registry request failed');
+    } else {
+      app.log.warn(error, 'Invalid registry request');
+    }
+    const message =
+      statusCode === 413
+        ? 'Request payload is too large'
+        : statusCode < 500
+          ? 'Invalid request'
+          : 'Registry request failed';
+    return reply.status(statusCode).view('error.eta', {
+      title: `${statusCode} — Benchmark Registry`,
+      seo: createPageSeo({
+        title: `${statusCode} — Benchmark Registry`,
+        description: message,
+        index: false,
+      }),
+      statusCode,
+      message,
+      query: '',
+    });
+  });
+
   const eta = new Eta({
     views: viewsDirectory,
   });
@@ -77,10 +120,16 @@ export function createApp(options: CreateAppOptions = {}): FastifyInstance {
   const feedbackStore =
     options.feedbackStore ??
     (database === undefined ? undefined : createFeedbackStore(database));
+  const requestRateLimiter =
+    options.requestRateLimiter ??
+    (database === undefined || options.rateLimitSecret === undefined
+      ? undefined
+      : createDatabaseRequestRateLimiter(database, options.rateLimitSecret));
 
   void app.register(feedbackRoutes, {
     store: feedbackStore,
     adminAuth: options.adminAuth,
+    requestRateLimiter,
   });
   void app.register(indexRoutes, { database });
 

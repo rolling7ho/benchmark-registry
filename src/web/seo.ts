@@ -1,4 +1,4 @@
-export const CANONICAL_ORIGIN = 'https://benchmarkregistry.org';
+export const CANONICAL_ORIGIN = 'https://www.benchmarkregistry.org';
 export const SITE_NAME = 'Benchmark Registry';
 
 export interface PageSeo {

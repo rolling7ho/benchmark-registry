@@ -111,7 +111,7 @@ Exact identifiers short-circuit broader search. Unresolved queries use parameter
 - `/feedback` — public feedback and correction submission form
 - `/health`
 
-Public feedback is validated and written only by the server; browsers never receive database credentials. Configure both `ADMIN_USERNAME` and `ADMIN_PASSWORD` (minimum 12 characters) to enable the HTTP Basic-protected `/admin/feedback` review queue. Leave both unset to keep web administration disabled. The database migration enables row-level security and gives Supabase `anon` and `authenticated` roles no direct privileges or policies on feedback submissions.
+Public feedback is validated and written only by the server; browsers never receive database credentials. The database-backed feedback and administrator-authentication rate limiter keys pseudonymous client fingerprints with `FEEDBACK_RATE_LIMIT_SECRET` (at least 32 characters) when configured, otherwise with the already-required server-only `DATABASE_URL`. Configure both `ADMIN_USERNAME` and `ADMIN_PASSWORD` (minimum 12 characters) to enable the HTTP Basic-protected `/admin/feedback` review queue. Leave both unset to keep web administration disabled. Database migrations enable row-level security and give Supabase `anon` and `authenticated` roles no direct privileges or policies on feedback or rate-limit state.
 
 Exact record search and record detail are deliberately separate. `/search?q=BR-00155-001` returns one standard registry row; `/records/BR-00155-001` displays the complete record context and provenance. Unknown context remains unknown and never implies provider defaults.
 
@@ -126,7 +126,7 @@ NODE_ENV=production pnpm start
 
 The build cleans `dist`, compiles the server, copies the Eta views, minifies the public CSS, writes a content-hashed stylesheet, and generates the asset manifest used by the server-rendered layout. Production serves only `dist/public` under `/public/`; hashed assets receive a one-year immutable cache policy, while dynamic HTML uses `Cache-Control: no-cache`. Textual responses of at least 1 KiB negotiate Brotli or gzip compression. Supabase remains the PostgreSQL host rather than an application SDK or frontend architecture.
 
-No public client-side JavaScript is currently shipped. Responsive behavior is CSS-driven. On narrow displays the same registry tables and all columns remain present; tables scroll horizontally inside their own native scroll containers rather than becoming cards or widening the document body.
+Public search, filtering, pagination, and responsive layout require no client-side JavaScript. One small progressive script supports explicit copy/share buttons, and production includes Vercel Web Analytics as disclosed in the Privacy Policy. On narrow displays the same registry tables and all columns remain present; tables scroll horizontally inside their own native scroll containers rather than becoming cards or widening the document body.
 
 See [production web behavior](docs/production.md) for the delivery, security-header, source-map, and responsive policies.
 

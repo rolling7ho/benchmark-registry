@@ -22,7 +22,7 @@ Development renders the source Eta templates and serves readable source CSS dire
 
 Production compression and security headers are registered centrally before public routes and static delivery. Dynamic HTML is revalidation-oriented and is never immutable; content-hashed static assets use long-lived immutable caching. Server source maps may remain beside compiled operator code for debugging, but the static mount is restricted to `dist/public`, so server source maps and repository files are not public.
 
-Mobile responsiveness is CSS-driven and has no client-side application runtime. Narrow layouts preserve the same search-to-table information architecture. Wide registry and browse tables retain every column and use deliberate native horizontal scrolling inside a keyboard-reachable container; document-level horizontal overflow is a defect.
+Mobile responsiveness is CSS-driven and has no client-rendered application runtime. Narrow layouts preserve the same search-to-table information architecture. Wide registry and browse tables retain every column and use deliberate native horizontal scrolling inside a keyboard-reachable container; document-level horizontal overflow is a defect.
 
 ## Core boundaries
 

@@ -1,5 +1,5 @@
-import type { FastifyInstance } from 'fastify';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../src/application.js';
 import type {
@@ -9,6 +9,10 @@ import type {
   FeedbackSubmission,
   NewFeedbackSubmission,
 } from '../src/feedback/types.js';
+import type {
+  RateLimitResult,
+  RequestRateLimiter,
+} from '../src/security/request-rate-limit.js';
 
 const ADMIN_AUTHORIZATION = `Basic ${Buffer.from('reviewer:a-long-test-password').toString('base64')}`;
 
@@ -67,6 +71,22 @@ class MemoryFeedbackStore implements FeedbackStore {
   }
 }
 
+class MemoryRequestRateLimiter implements RequestRateLimiter {
+  private readonly counts = new Map<string, number>();
+
+  consume(
+    _request: FastifyRequest,
+    input: { scope: string; limit: number },
+  ): Promise<RateLimitResult> {
+    const count = (this.counts.get(input.scope) ?? 0) + 1;
+    this.counts.set(input.scope, count);
+    return Promise.resolve({
+      allowed: count <= input.limit,
+      retryAfterSeconds: count <= input.limit ? 0 : 60,
+    });
+  }
+}
+
 function validPayload(overrides: Record<string, string> = {}): string {
   return new URLSearchParams({
     type: 'incorrect-record',
@@ -88,6 +108,7 @@ describe('feedback and corrections workflow', () => {
     store = new MemoryFeedbackStore();
     app = createApp({
       feedbackStore: store,
+      requestRateLimiter: new MemoryRequestRateLimiter(),
       adminAuth: {
         username: 'reviewer',
         password: 'a-long-test-password',
@@ -179,12 +200,66 @@ describe('feedback and corrections workflow', () => {
     );
   });
 
+  it('handles repeated prefill parameters without an internal error', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/feedback?record=one&record=two&type=other&type=search-issue',
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.body).not.toContain('trim is not a function');
+  });
+
+  it('rejects cross-origin browser submissions', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/feedback',
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        host: 'www.benchmarkregistry.org',
+        origin: 'https://attacker.example',
+      },
+      payload: validPayload(),
+    });
+    expect(response.statusCode).toBe(400);
+    expect(store.submissions).toHaveLength(0);
+  });
+
+  it('returns a generic HTML error when feedback storage fails', async () => {
+    vi.spyOn(store, 'create').mockRejectedValueOnce(
+      new Error('sensitive database failure detail'),
+    );
+    const response = await submit(validPayload());
+    expect(response.statusCode).toBe(500);
+    expect(response.headers['content-type']).toContain('text/html');
+    expect(response.body).toContain('500 — Registry request failed');
+    expect(response.body).not.toContain('sensitive database failure detail');
+  });
+
   it('handles a repeated submission token idempotently', async () => {
     const first = await submit(validPayload());
     const repeated = await submit(validPayload());
     expect(first.statusCode).toBe(303);
     expect(repeated.statusCode).toBe(303);
     expect(store.submissions).toHaveLength(1);
+  });
+
+  it('rate limits repeated public feedback submissions', async () => {
+    for (let index = 0; index < 5; index += 1) {
+      const response = await submit(
+        validPayload({
+          submission_token: `11111111-1111-4111-8111-${String(index).padStart(12, '0')}`,
+        }),
+      );
+      expect(response.statusCode).toBe(303);
+    }
+    const limited = await submit(
+      validPayload({
+        submission_token: '11111111-1111-4111-8111-999999999999',
+      }),
+    );
+    expect(limited.statusCode).toBe(429);
+    expect(limited.headers['retry-after']).toBe('60');
+    expect(store.submissions).toHaveLength(5);
   });
 
   it('does not store honeypot submissions', async () => {
@@ -215,6 +290,22 @@ describe('feedback and corrections workflow', () => {
     });
     expect(response.statusCode).toBe(401);
     expect(store.submissions[0]?.status).toBe('open');
+  });
+
+  it('rate limits repeated failed administrator authentication', async () => {
+    for (let index = 0; index < 10; index += 1) {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/admin/feedback',
+      });
+      expect(response.statusCode).toBe(401);
+    }
+    const limited = await app.inject({
+      method: 'GET',
+      url: '/admin/feedback',
+    });
+    expect(limited.statusCode).toBe(429);
+    expect(limited.headers['retry-after']).toBe('60');
   });
 
   it('allows an authorized administrator to list and filter submissions', async () => {
@@ -261,8 +352,8 @@ describe('feedback and corrections workflow', () => {
     const headers = {
       authorization: ADMIN_AUTHORIZATION,
       'content-type': 'application/x-www-form-urlencoded',
-      host: 'benchmarkregistry.org',
-      origin: 'https://benchmarkregistry.org',
+      host: 'www.benchmarkregistry.org',
+      origin: 'https://www.benchmarkregistry.org',
     };
     const invalid = await app.inject({
       method: 'POST',

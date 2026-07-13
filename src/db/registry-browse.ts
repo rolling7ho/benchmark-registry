@@ -36,11 +36,11 @@ export interface PublicBenchmarkVersion {
   recordCount: number;
 }
 
-async function versionsForBenchmark(
+async function versionsByBenchmark(
   db: Database,
-  benchmarkId: string,
-): Promise<PublicBenchmarkVersion[]> {
-  const rows = await db
+  benchmarkId?: string,
+): Promise<Map<string, PublicBenchmarkVersion[]>> {
+  let query = db
     .selectFrom('benchmark_versions')
     .leftJoin(
       'benchmark_records',
@@ -48,6 +48,7 @@ async function versionsForBenchmark(
       'benchmark_versions.id',
     )
     .select([
+      'benchmark_versions.benchmark_id as benchmarkId',
       'benchmark_versions.id',
       'benchmark_versions.canonical_reference as canonicalReference',
       'benchmark_versions.version_label as versionLabel',
@@ -56,15 +57,33 @@ async function versionsForBenchmark(
       'benchmark_versions.release_date as releaseDate',
     ])
     .select((eb) => eb.fn.count('benchmark_records.id').as('recordCount'))
-    .where('benchmark_versions.benchmark_id', '=', benchmarkId)
     .groupBy('benchmark_versions.id')
-    .orderBy('benchmark_versions.canonical_reference')
-    .execute();
-  return rows.map((row) => ({
-    ...row,
-    releaseDate: isoDate(row.releaseDate),
-    recordCount: Number(row.recordCount),
-  }));
+    .orderBy('benchmark_versions.canonical_reference');
+  if (benchmarkId !== undefined) {
+    query = query.where('benchmark_versions.benchmark_id', '=', benchmarkId);
+  }
+  const result = new Map<string, PublicBenchmarkVersion[]>();
+  for (const row of await query.execute()) {
+    const versions = result.get(row.benchmarkId) ?? [];
+    versions.push({
+      id: row.id,
+      canonicalReference: row.canonicalReference,
+      versionLabel: row.versionLabel,
+      variantName: row.variantName,
+      status: row.status,
+      releaseDate: isoDate(row.releaseDate),
+      recordCount: Number(row.recordCount),
+    });
+    result.set(row.benchmarkId, versions);
+  }
+  return result;
+}
+
+async function versionsForBenchmark(
+  db: Database,
+  benchmarkId: string,
+): Promise<PublicBenchmarkVersion[]> {
+  return (await versionsByBenchmark(db, benchmarkId)).get(benchmarkId) ?? [];
 }
 
 export interface PublicOrganization {
@@ -143,21 +162,30 @@ export async function getModelBySlug(
   db: Database,
   slug: string,
 ): Promise<PublicModel | undefined> {
-  const row = await db
+  const selection = [
+    'models.id as id',
+    'models.model_id as modelId',
+    'models.official_name as officialName',
+    'organizations.name as organizationName',
+    'models.family as family',
+    'models.model_number as modelNumber',
+    'models.tier_code as tierCode',
+    'models.status as status',
+    'models.release_date as releaseDate',
+  ] as const;
+  let row = await db
     .selectFrom('models')
     .innerJoin('organizations', 'organizations.id', 'models.organization_id')
-    .select([
-      'models.id as id',
-      'models.model_id as modelId',
-      'models.official_name as officialName',
-      'organizations.name as organizationName',
-      'models.family as family',
-      'models.model_number as modelNumber',
-      'models.tier_code as tierCode',
-      'models.status as status',
-      'models.release_date as releaseDate',
-    ])
+    .select(selection)
     .where('models.model_id', '=', slug.toUpperCase())
+    .executeTakeFirst();
+  row ??= await db
+    .selectFrom('model_aliases')
+    .innerJoin('models', 'models.id', 'model_aliases.model_id')
+    .innerJoin('organizations', 'organizations.id', 'models.organization_id')
+    .select(selection)
+    .where('model_aliases.alias_type', '=', 'LEGACY_MODEL_ID')
+    .where('model_aliases.normalized_alias', '=', slug.toLowerCase())
     .executeTakeFirst();
   return row === undefined
     ? undefined
@@ -169,32 +197,33 @@ export async function getModelBySlug(
 }
 
 export async function listBenchmarks(db: Database): Promise<PublicBenchmark[]> {
-  const rows = await db
-    .selectFrom('benchmarks')
-    .leftJoin(
-      'benchmark_records',
-      'benchmark_records.benchmark_id',
-      'benchmarks.id',
-    )
-    .select([
-      'benchmarks.id as id',
-      'benchmarks.slug as slug',
-      'benchmarks.name as name',
-      'benchmarks.version as version',
-      'benchmarks.organization_name as organizationName',
-      'benchmarks.status as status',
-    ])
-    .select((eb) => eb.fn.count('benchmark_records.id').as('recordCount'))
-    .groupBy('benchmarks.id')
-    .orderBy('benchmarks.name', 'asc')
-    .execute();
-  return Promise.all(
-    rows.map(async (row) => ({
-      ...row,
-      recordCount: Number(row.recordCount),
-      versions: await versionsForBenchmark(db, row.id),
-    })),
-  );
+  const [rows, versions] = await Promise.all([
+    db
+      .selectFrom('benchmarks')
+      .leftJoin(
+        'benchmark_records',
+        'benchmark_records.benchmark_id',
+        'benchmarks.id',
+      )
+      .select([
+        'benchmarks.id as id',
+        'benchmarks.slug as slug',
+        'benchmarks.name as name',
+        'benchmarks.version as version',
+        'benchmarks.organization_name as organizationName',
+        'benchmarks.status as status',
+      ])
+      .select((eb) => eb.fn.count('benchmark_records.id').as('recordCount'))
+      .groupBy('benchmarks.id')
+      .orderBy('benchmarks.name', 'asc')
+      .execute(),
+    versionsByBenchmark(db),
+  ]);
+  return rows.map((row) => ({
+    ...row,
+    recordCount: Number(row.recordCount),
+    versions: versions.get(row.id) ?? [],
+  }));
 }
 
 export async function getBenchmarkBySlug(

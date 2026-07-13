@@ -50,7 +50,7 @@ const approvalOverridesSchema = z
     benchmark: z.string().trim().min(1).optional(),
     metric: z.string().trim().min(1).optional(),
     scoreDisplay: z.string().trim().min(1).optional(),
-    scoreValue: z.number().finite().positive().nullable().optional(),
+    scoreValue: z.number().finite().nullable().optional(),
     evaluationDate: z.iso.date().nullable().optional(),
     reportedDate: z.iso.date().nullable().optional(),
     benchmarkVersion: z.string().trim().min(1).optional(),

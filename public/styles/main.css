@@ -440,6 +440,18 @@ pre {
   .site-title {
     font-size: 20px;
   }
+  button,
+  .pagination-links a {
+    min-height: 24px;
+  }
+  .pagination-links a {
+    display: inline-block;
+    padding: 4px 2px;
+  }
+  .compact-action {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
   nav {
     display: flex;
     flex-wrap: wrap;

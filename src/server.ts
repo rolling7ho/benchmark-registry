@@ -10,6 +10,8 @@ async function startServer(): Promise<void> {
     const database = createDatabase(environment.DATABASE_URL);
     const currentApp = createApp({
       database,
+      rateLimitSecret:
+        environment.FEEDBACK_RATE_LIMIT_SECRET ?? environment.DATABASE_URL,
       ...(environment.ADMIN_USERNAME === undefined
         ? {}
         : {

@@ -320,6 +320,14 @@ export interface FeedbackSubmissionsTable {
   updated_at: TimestampColumn;
 }
 
+export interface RequestRateLimitsTable {
+  scope: string;
+  fingerprint: string;
+  window_started_at: TimestampColumn;
+  request_count: number;
+  updated_at: TimestampColumn;
+}
+
 export interface DatabaseSchema {
   registry_metadata: RegistryMetadataTable;
   organizations: OrganizationsTable;
@@ -339,4 +347,5 @@ export interface DatabaseSchema {
   ingestion_jobs: IngestionJobsTable;
   ingestion_candidates: IngestionCandidatesTable;
   feedback_submissions: FeedbackSubmissionsTable;
+  request_rate_limits: RequestRateLimitsTable;
 }

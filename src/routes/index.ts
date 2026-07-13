@@ -1,4 +1,5 @@
 import type { FastifyPluginCallback, FastifyReply } from 'fastify';
+import { sql } from 'kysely';
 
 import {
   getBenchmarkBySlug,
@@ -81,6 +82,10 @@ function parsePage(value: string | undefined): number {
   if (value === undefined || !/^\d+$/.test(value)) return 1;
   const page = Number(value);
   return Number.isSafeInteger(page) && page > 0 ? page : 1;
+}
+
+function hasNonScalarQueryValue(value: unknown): boolean {
+  return value !== undefined && typeof value !== 'string';
 }
 
 const REGISTRY_SORTS = new Set<RegistrySort>([
@@ -239,6 +244,13 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
   const database = options.database;
 
   app.get<{ Querystring: LeaderboardQuery }>('/', async (request, reply) => {
+    if (
+      Object.values(request.query).some((value) =>
+        hasNonScalarQueryValue(value),
+      )
+    ) {
+      return renderError(reply, 400, 'Query parameters must have one value.');
+    }
     const page = parsePage(request.query.page);
     const selectedModelSlug = request.query.model?.trim().toLowerCase() || null;
     const benchmarkSlug = request.query.benchmark?.trim().toLowerCase() || null;
@@ -305,8 +317,6 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         selectedMetric: metricSlug ?? '',
         sort,
         order,
-        rankOffset:
-          sort === 'score' ? (result.page - 1) * result.pageSize : undefined,
         sortUrls: registrySortUrls(
           {
             model: selectedModelSlug ?? '',
@@ -328,6 +338,12 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
   });
 
   app.get<{ Querystring: SearchQuery }>('/search', async (request, reply) => {
+    if (
+      hasNonScalarQueryValue(request.query.q) ||
+      hasNonScalarQueryValue(request.query.page)
+    ) {
+      return renderError(reply, 400, 'Query parameters must have one value.');
+    }
     const rawQuery = request.query.q ?? '';
     if (rawQuery.length > 256) {
       return renderError(
@@ -371,6 +387,10 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         case 'EXACT_RECORD':
           return { kind: 'EXACT_RECORD', recordId: resolution.recordId };
         case 'RECORD_PREFIX':
+          return {
+            kind: 'RECORD_PREFIX',
+            recordPrefix: resolution.recordPrefix,
+          };
         case 'MODEL':
           return { kind: 'MODEL', modelInternalId: resolution.modelInternalId };
         case 'BENCHMARK':
@@ -896,16 +916,23 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
     },
   );
 
-  app.get('/health', () => ({ status: 'ok' }));
+  app.get('/health', async (_request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    if (database === undefined) {
+      return reply.status(503).send({ status: 'unavailable' });
+    }
+    try {
+      await sql`select 1`.execute(database);
+      return { status: 'ok' };
+    } catch (error) {
+      app.log.error(error, 'Database readiness check failed');
+      return reply.status(503).send({ status: 'unavailable' });
+    }
+  });
 
   app.setNotFoundHandler((_request, reply) =>
     renderError(reply, 404, 'Record or page not found'),
   );
-  app.setErrorHandler((error, _request, reply) => {
-    app.log.error(error, 'Registry request failed');
-    return renderError(reply, 500, 'Registry request failed');
-  });
-
   done();
 };
 

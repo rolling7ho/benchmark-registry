@@ -18,6 +18,8 @@ NODE_ENV=production pnpm start
 
 Development continues to render `src/views` and serve the readable source stylesheet from `public`. Generated production assets are build output and must not be edited.
 
+Production environment validation requires `DATABASE_URL`. A private `FEEDBACK_RATE_LIMIT_SECRET` of at least 32 characters may be configured as a dedicated HMAC key for durable, pseudonymous abuse-control fingerprints; when it is omitted, the already-required server-only `DATABASE_URL` is used as the key. Neither value is exposed to browsers. `ADMIN_USERNAME` and `ADMIN_PASSWORD` remain optional as a pair; omitting both disables the administrative feedback routes.
+
 ## Asset resolution and caching
 
 The manifest maps the logical name `styles/main.css` to a generated name such as `styles/main.a8f29c012345.css`. The layout calls the shared `assetPath` helper. Development resolves the logical name to `/public/styles/main.css`; production resolves it through the manifest.
@@ -38,13 +40,13 @@ Production registers `@fastify/compress` centrally before static and route plugi
 
 Rendered HTML is not aggressively minified. Registry Documentation contains whitespace-sensitive `<pre>` identifier diagrams, and global HTML minification would create unnecessary correctness risk. CSS minification plus negotiated HTTP compression provides the production size reduction while preserving semantic markup and fixed-width explanations.
 
-No public client-side JavaScript is currently shipped.
+Public search, filtering, pagination, and responsive layout require no client-side JavaScript. A small content-hashed progressive script supports explicit copy/share buttons, and production loads Vercel Web Analytics as disclosed in the Privacy Policy.
 
 ## Security headers
 
 Security headers are configured centrally with `@fastify/helmet`. The Content Security Policy allows same-origin page resources and form submissions, disallows all scripts and object embedding, and blocks framing with `frame-ancestors 'none'`. External source links are ordinary user navigation and do not require resource-origin allowances. Helmet also provides `X-Content-Type-Options: nosniff` and related baseline protections. Referrers use `strict-origin-when-cross-origin`.
 
-The CSP deliberately excludes wildcard origins, `unsafe-eval`, and inline-script allowances. There are no public scripts that require them. `upgrade-insecure-requests` is omitted so local development over HTTP remains usable; production TLS redirection belongs at the deployment edge.
+The CSP deliberately excludes wildcard origins, `unsafe-eval`, and inline-script allowances. The progressive action script and Vercel Web Analytics load from same-origin paths. `upgrade-insecure-requests` is omitted so local development over HTTP remains usable; production TLS redirection belongs at the deployment edge.
 
 Public 500 pages remain generic while failures continue to be logged server-side.
 

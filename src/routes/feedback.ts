@@ -22,12 +22,14 @@ import {
   feedbackStatusSchema,
   normalizeRecordIdentifier,
 } from '../feedback/validation.js';
+import type { RequestRateLimiter } from '../security/request-rate-limit.js';
 import { hasSameOrigin } from '../web/same-origin.js';
 import { createPageSeo } from '../web/seo.js';
 
 interface FeedbackRouteOptions {
   store: FeedbackStore | undefined;
   adminAuth: AdminAuthConfig | undefined;
+  requestRateLimiter: RequestRateLimiter | undefined;
 }
 
 interface FeedbackQuery {
@@ -57,8 +59,10 @@ function publicFormValues(query: FeedbackQuery): {
   sourceUrl: string;
   email: string;
 } {
-  const queryType = FEEDBACK_TYPES.find((type) => type === query.type);
-  const rawRecord = query.record?.trim().slice(0, 64) ?? '';
+  const queryType = FEEDBACK_TYPES.find(
+    (type) => type === formString(query.type),
+  );
+  const rawRecord = formString(query.record).trim().slice(0, 64);
   return {
     type: queryType ?? 'other',
     recordIdentifier: normalizeRecordIdentifier(rawRecord) ?? rawRecord,
@@ -93,11 +97,11 @@ function renderFeedbackForm(
   });
 }
 
-function requireAdmin(
+async function requireAdmin(
   request: FastifyRequest,
   reply: FastifyReply,
   options: FeedbackRouteOptions,
-): boolean {
+): Promise<boolean> {
   reply
     .header('Cache-Control', 'no-store')
     .header('X-Robots-Tag', 'noindex, nofollow');
@@ -106,6 +110,20 @@ function requireAdmin(
     return false;
   }
   if (!isAuthorizedAdmin(request, options.adminAuth)) {
+    if (options.requestRateLimiter !== undefined) {
+      const rateLimit = await options.requestRateLimiter.consume(request, {
+        scope: 'admin-authentication',
+        limit: 10,
+        windowSeconds: 15 * 60,
+      });
+      if (!rateLimit.allowed) {
+        void reply
+          .header('Retry-After', String(rateLimit.retryAfterSeconds))
+          .status(429)
+          .send('Too many authentication attempts.');
+        return false;
+      }
+    }
     void reply
       .header('WWW-Authenticate', 'Basic realm="Benchmark Registry Admin"')
       .status(401)
@@ -145,6 +163,14 @@ const feedbackRoutes: FastifyPluginCallback<FeedbackRouteOptions> = (
     '/feedback',
     { bodyLimit: 16_384 },
     async (request, reply) => {
+      if (!hasSameOrigin(request)) {
+        return renderFeedbackForm(reply.status(400), {
+          values: publicFormValues({}),
+          submitted: false,
+          error: true,
+          submissionToken: randomUUID(),
+        });
+      }
       const parsed = feedbackFormSchema.safeParse(request.body);
       if (!parsed.success) {
         const body = request.body;
@@ -165,8 +191,25 @@ const feedbackRoutes: FastifyPluginCallback<FeedbackRouteOptions> = (
       // A bot receives the same success response without learning that the
       // hidden field caused its submission to be discarded.
       if (!parsed.data.honeypotFilled) {
-        if (options.store === undefined) {
+        if (
+          options.store === undefined ||
+          options.requestRateLimiter === undefined
+        ) {
           return renderFeedbackForm(reply.status(503), {
+            values: publicFormValues({}),
+            submitted: false,
+            error: true,
+            submissionToken: randomUUID(),
+          });
+        }
+        const rateLimit = await options.requestRateLimiter.consume(request, {
+          scope: 'public-feedback',
+          limit: 5,
+          windowSeconds: 60 * 60,
+        });
+        if (!rateLimit.allowed) {
+          reply.header('Retry-After', String(rateLimit.retryAfterSeconds));
+          return renderFeedbackForm(reply.status(429), {
             values: publicFormValues({}),
             submitted: false,
             error: true,
@@ -185,7 +228,7 @@ const feedbackRoutes: FastifyPluginCallback<FeedbackRouteOptions> = (
   app.get<{ Querystring: AdminFeedbackQuery }>(
     '/admin/feedback',
     async (request, reply) => {
-      if (!requireAdmin(request, reply, options)) return reply;
+      if (!(await requireAdmin(request, reply, options))) return reply;
       if (options.store === undefined) {
         return reply.status(503).send('Feedback storage is unavailable.');
       }
@@ -223,7 +266,7 @@ const feedbackRoutes: FastifyPluginCallback<FeedbackRouteOptions> = (
   app.get<{ Params: { id: string } }>(
     '/admin/feedback/:id',
     async (request, reply) => {
-      if (!requireAdmin(request, reply, options)) return reply;
+      if (!(await requireAdmin(request, reply, options))) return reply;
       if (!validSubmissionId(request.params.id)) {
         return reply.status(404).send('Feedback submission not found.');
       }
@@ -254,7 +297,7 @@ const feedbackRoutes: FastifyPluginCallback<FeedbackRouteOptions> = (
     '/admin/feedback/:id/status',
     { bodyLimit: 2048 },
     async (request, reply) => {
-      if (!requireAdmin(request, reply, options)) return reply;
+      if (!(await requireAdmin(request, reply, options))) return reply;
       if (!hasSameOrigin(request)) {
         return reply.status(400).send('Unable to update feedback.');
       }

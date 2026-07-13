@@ -56,5 +56,5 @@
   <p class="leaderboard-notice">Scores from different benchmarks, metrics, versions, or evaluation configurations are not necessarily comparable. Use the filters to narrow the records before drawing comparisons.</p>
 <% } %>
 <% if (it.statusNotice !== null) { %><p class="status-notice"><%= it.statusNotice %></p><% } %>
-<%~ include('partials/registry-table.eta', { records: it.records, emptyMessage: it.emptyMessage, emptyDescription: it.emptyDescription, emptyAction: it.emptyAction, rankOffset: it.leaderboard?.rankOffset, sort: it.leaderboard?.sort, order: it.leaderboard?.order, sortUrls: it.leaderboard?.sortUrls }) %>
+<%~ include('partials/registry-table.eta', { records: it.records, emptyMessage: it.emptyMessage, emptyDescription: it.emptyDescription, emptyAction: it.emptyAction, sort: it.leaderboard?.sort, order: it.leaderboard?.order, sortUrls: it.leaderboard?.sortUrls }) %>
 <% if (it.pagination !== null) { %><%~ include('partials/pagination.eta', it.pagination) %><% } %>

@@ -168,6 +168,36 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
       expect(second.record_id).toBe('BR-00155-002');
     });
 
+    it('preserves zero and negative numeric measurements', async () => {
+      const model = await createFixtureModel();
+      const { source } = await createRecordReferences();
+      const sourceUrl = await fixtureSourceUrl(source.id);
+      const base = {
+        modelIdentifier: model.model_id,
+        benchmarkSlug: 'fixture-benchmark',
+        metricSlug: 'fixture-score',
+        sourceUrl,
+      };
+      const zero = await commitPreparedRecord(
+        database,
+        await prepareRecord(database, {
+          ...base,
+          scoreDisplay: '0',
+          scoreValue: 0,
+        }),
+      );
+      const negative = await commitPreparedRecord(
+        database,
+        await prepareRecord(database, {
+          ...base,
+          scoreDisplay: '-1.25',
+          scoreValue: -1.25,
+        }),
+      );
+      expect(Number(zero.score_value)).toBe(0);
+      expect(Number(negative.score_value)).toBe(-1.25);
+    });
+
     it('does not consume a sequence when record insertion fails', async () => {
       const model = await createFixtureModel();
       const { source } = await createRecordReferences();
