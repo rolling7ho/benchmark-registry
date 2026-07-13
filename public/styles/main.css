@@ -95,6 +95,18 @@ nav span {
 .search-form label {
   font-weight: bold;
 }
+.search-operator-help {
+  margin: 0 0 7px 58px;
+  color: #333;
+  font-size: 12px;
+}
+.search-operator-help summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.search-operator-help p {
+  margin: 4px 0;
+}
 input {
   border: 1px solid #555;
   border-radius: 0;
@@ -519,5 +531,8 @@ pre {
   .search-form button {
     min-height: 31px;
     padding: 5px 12px;
+  }
+  .search-operator-help {
+    margin-left: 0;
   }
 }

@@ -1,5 +1,10 @@
 <form class="search-form" action="/search" method="get">
   <label for="registry-search">Search:</label>
-  <input id="registry-search" name="q" type="search" maxlength="256" value="<%= it.query %>">
+  <input id="registry-search" name="q" type="search" maxlength="256" value="<%= it.query %>" placeholder="Model, benchmark, record, or operator" aria-describedby="search-operator-help">
   <button type="submit">Search</button>
 </form>
+<details class="search-operator-help" id="search-operator-help">
+  <summary>Search operators</summary>
+  <p><code>brand:</code> <code>benchmark:</code> <code>record:</code> <code>model:</code> <code>metric:</code> <code>date:</code> <code>org:</code></p>
+  <p>Separate values with commas, or alternatives with uppercase <code>OR</code>. Example: <code>brand:Meta, Anthropic benchmark:GPQA</code></p>
+</details>

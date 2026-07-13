@@ -2,6 +2,7 @@ import { sql } from 'kysely';
 
 import type { Database } from '../db/database.js';
 import { compactSearchText, normalizeSearchText } from './normalize.js';
+import { parseSearchQuery, type ParsedSearchQuery } from './query-language.js';
 
 export type SearchResolution =
   | { kind: 'EMPTY'; displayQuery: string }
@@ -28,6 +29,7 @@ export type SearchResolution =
       organizationInternalId: string;
     }
   | { kind: 'METRIC'; displayQuery: string; metricInternalId: string }
+  | { kind: 'QUERY'; displayQuery: string; query: ParsedSearchQuery }
   | { kind: 'GENERAL'; displayQuery: string; normalizedQuery: string };
 
 interface ExactSearchMatch {
@@ -215,5 +217,8 @@ export async function resolveSearch(
     }
   }
 
-  return { kind: 'GENERAL', displayQuery, normalizedQuery };
+  const parsedQuery = parseSearchQuery(displayQuery);
+  return parsedQuery === null
+    ? { kind: 'GENERAL', displayQuery, normalizedQuery }
+    : { kind: 'QUERY', displayQuery, query: parsedQuery };
 }

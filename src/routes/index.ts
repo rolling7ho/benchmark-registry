@@ -413,6 +413,8 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
             kind: 'METRIC',
             metricInternalId: resolution.metricInternalId,
           };
+        case 'QUERY':
+          return { kind: 'QUERY', query: resolution.query };
         case 'GENERAL':
           return { kind: 'GENERAL', query: resolution.normalizedQuery };
         case 'EMPTY':

@@ -19,6 +19,9 @@ describe('public application routes without a database', () => {
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain('BENCHMARK REGISTRY');
     expect(response.body).toContain('action="/search"');
+    expect(response.body).toContain('Search operators');
+    expect(response.body).toContain('<code>brand:</code>');
+    expect(response.body).toContain('uppercase <code>OR</code>');
     expect(response.body).toContain('Record No.');
     expect(response.body).not.toContain('Benchmark Records Leaderboard');
     expect(response.body).toContain('name="benchmark"');
@@ -182,6 +185,8 @@ describe('public application routes without a database', () => {
     }
     expect(response.body).toContain('OPNAI-56');
     expect(response.body).toContain('BR-00155-042');
+    expect(response.body).toContain('brand:Meta, Anthropic');
+    expect(response.body).toContain('Muse Spark OR Opus 4.7');
     expect(response.body).toContain('does not constitute endorsement');
     expect(response.body).toContain('href="https://x.com/rolling7ho"');
     expect(response.body).toContain('@rolling7ho');

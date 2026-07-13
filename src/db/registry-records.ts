@@ -10,6 +10,10 @@ import type { RegistryStatus } from './constants.js';
 import type { Database } from './database.js';
 import type { DatabaseSchema } from './types.js';
 import { formatBenchmarkDisplay } from '../registry/benchmark-display.js';
+import type {
+  ParsedSearchQuery,
+  SearchField,
+} from '../search/query-language.js';
 import { modelSlug } from '../web/seo.js';
 
 export const REGISTRY_PAGE_SIZE = 100;
@@ -73,19 +77,19 @@ export type RegistryRecordFilter =
   | { kind: 'BENCHMARK_VERSION'; benchmarkVersionInternalId: string }
   | { kind: 'ORGANIZATION'; organizationInternalId: string }
   | { kind: 'METRIC'; metricInternalId: string }
+  | { kind: 'QUERY'; query: ParsedSearchQuery }
   | { kind: 'GENERAL'; query: string };
 
-type JoinedQuery = SelectQueryBuilder<
-  DatabaseSchema,
+type JoinedTable =
   | 'benchmark_records'
   | 'models'
   | 'benchmarks'
   | 'benchmark_versions'
   | 'metrics'
   | 'sources'
-  | 'organizations',
-  object
->;
+  | 'organizations';
+
+type JoinedQuery = SelectQueryBuilder<DatabaseSchema, JoinedTable, object>;
 
 function joinedRecords(db: Database): JoinedQuery {
   return db
@@ -107,16 +111,7 @@ function escapedLikePattern(query: string): string {
 }
 
 function generalSearchExpression(
-  eb: ExpressionBuilder<
-    DatabaseSchema,
-    | 'benchmark_records'
-    | 'models'
-    | 'benchmarks'
-    | 'benchmark_versions'
-    | 'metrics'
-    | 'sources'
-    | 'organizations'
-  >,
+  eb: ExpressionBuilder<DatabaseSchema, JoinedTable>,
   query: string,
 ): Expression<SqlBool> {
   const pattern = escapedLikePattern(query);
@@ -147,6 +142,118 @@ function generalSearchExpression(
         ),
     ),
   ]);
+}
+
+function fieldSearchExpression(
+  eb: ExpressionBuilder<DatabaseSchema, JoinedTable>,
+  field: SearchField | null,
+  value: string,
+): Expression<SqlBool> {
+  if (field === null) return generalSearchExpression(eb, value);
+
+  const pattern = escapedLikePattern(value);
+  const matches = (column: string): Expression<SqlBool> =>
+    sql<boolean>`${sql.ref(column)} ilike ${pattern} escape '\\'`;
+
+  switch (field) {
+    case 'brand':
+      return eb.or([
+        matches('organizations.name'),
+        matches('organizations.slug'),
+        matches('organizations.provider_prefix'),
+      ]);
+    case 'benchmark':
+      return eb.or([
+        matches('benchmarks.name'),
+        matches('benchmarks.slug'),
+        matches('benchmark_versions.canonical_reference'),
+        matches('benchmark_versions.version_label'),
+        matches('benchmark_versions.variant_name'),
+        eb.exists(
+          eb
+            .selectFrom('benchmark_aliases')
+            .select('benchmark_aliases.id')
+            .whereRef('benchmark_aliases.benchmark_id', '=', 'benchmarks.id')
+            .where((aliasEb) =>
+              aliasEb.or([
+                sql<boolean>`benchmark_aliases.alias ilike ${pattern} escape '\\'`,
+                sql<boolean>`benchmark_aliases.normalized_alias ilike ${pattern} escape '\\'`,
+                sql<boolean>`benchmark_aliases.compact_alias ilike ${pattern} escape '\\'`,
+              ]),
+            ),
+        ),
+      ]);
+    case 'record': {
+      const numericValue = /^\d+$/.test(value) ? Number(value) : null;
+      return numericValue !== null && Number.isSafeInteger(numericValue)
+        ? eb('benchmark_records.sequence_number', '=', numericValue)
+        : matches('benchmark_records.record_id');
+    }
+    case 'model':
+      return eb.or([
+        matches('models.model_id'),
+        matches('models.official_name'),
+        matches('models.family'),
+        eb.exists(
+          eb
+            .selectFrom('model_aliases')
+            .select('model_aliases.id')
+            .whereRef('model_aliases.model_id', '=', 'models.id')
+            .where((aliasEb) =>
+              aliasEb.or([
+                sql<boolean>`model_aliases.alias ilike ${pattern} escape '\\'`,
+                sql<boolean>`model_aliases.normalized_alias ilike ${pattern} escape '\\'`,
+                sql<boolean>`model_aliases.compact_alias ilike ${pattern} escape '\\'`,
+              ]),
+            ),
+        ),
+      ]);
+    case 'metric':
+      return eb.or([matches('metrics.name'), matches('metrics.slug')]);
+    case 'date':
+      return /^\d{4}(?:-\d{2})?(?:-\d{2})?$/.test(value)
+        ? sql<boolean>`benchmark_records.evaluation_date::text like ${`${value}%`}`
+        : sql<boolean>`false`;
+    case 'org':
+      return eb.or([
+        matches('organizations.name'),
+        matches('organizations.slug'),
+        matches('benchmarks.organization_name'),
+        matches('sources.publisher'),
+        eb.exists(
+          eb
+            .selectFrom('evaluators')
+            .select('evaluators.id')
+            .whereRef('evaluators.id', '=', 'benchmark_records.evaluator_id')
+            .where((evaluatorEb) =>
+              evaluatorEb.or([
+                sql<boolean>`evaluators.name ilike ${pattern} escape '\\'`,
+                sql<boolean>`evaluators.slug ilike ${pattern} escape '\\'`,
+              ]),
+            ),
+        ),
+      ]);
+  }
+}
+
+function parsedSearchExpression(
+  eb: ExpressionBuilder<DatabaseSchema, JoinedTable>,
+  query: ParsedSearchQuery,
+): Expression<SqlBool> {
+  if (query.alternatives.length === 0) return sql<boolean>`false`;
+  return eb.or(
+    query.alternatives.map((alternative) =>
+      eb.and(
+        alternative.terms.map((term) =>
+          eb.or(
+            term.values.map((value) =>
+              fieldSearchExpression(eb, term.field, value),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 function applyFilter(
@@ -219,6 +326,10 @@ function applyFilter(
       return query
         .where('benchmark_records.metric_id', '=', filter.metricInternalId)
         .where('benchmark_records.status', '=', 'ACTIVE');
+    case 'QUERY':
+      return query
+        .where('benchmark_records.status', '=', 'ACTIVE')
+        .where((eb) => parsedSearchExpression(eb, filter.query));
     case 'GENERAL':
       return query
         .where('benchmark_records.status', '=', 'ACTIVE')

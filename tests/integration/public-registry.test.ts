@@ -68,6 +68,48 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
       ]);
     });
 
+    it('supports field operators, comma search, and OR alternatives', async () => {
+      const searches = [
+        ['brand:OpenAI, Anthropic', 4],
+        ['benchmark:DeepSWE metric:Overall', 2],
+        ['model:GPT-5.5 benchmark:GPQA', 1],
+        ['record:BR-00155-001', 1],
+        ['record:1', 3],
+        ['date:2026-06-18', 1],
+        ['date:2026-06', 5],
+        ['org:Example', 5],
+        ['GPT-5.5 OR Claude Opus 4.8', 4],
+      ] as const;
+
+      for (const [query, expectedCount] of searches) {
+        const resolution = await resolveSearch(database, query);
+        expect(resolution.kind, query).toBe('QUERY');
+        if (resolution.kind !== 'QUERY') continue;
+        const result = await getRegistryRecords(database, {
+          kind: 'QUERY',
+          query: resolution.query,
+        });
+        expect(result.total, query).toBe(expectedCount);
+      }
+    });
+
+    it('combines complete operator groups with OR', async () => {
+      const resolution = await resolveSearch(
+        database,
+        'brand:OpenAI benchmark:GPQA OR brand:Anthropic benchmark:DeepSWE',
+      );
+      expect(resolution.kind).toBe('QUERY');
+      if (resolution.kind !== 'QUERY') return;
+      const result = await getRegistryRecords(database, {
+        kind: 'QUERY',
+        query: resolution.query,
+      });
+      expect(result.records.map((record) => record.recordId)).toEqual([
+        'BR-00155-002',
+        'BR-002O48-001',
+      ]);
+    });
+
     it('counts the first page and clamps out-of-range pages', async () => {
       const firstPage = await getRegistryRecords(
         database,

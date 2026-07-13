@@ -35,6 +35,11 @@ BR  = Benchmark Record
   <section id="search"><h2>Search Behavior</h2>
     <p>Search is case-insensitive. Recognized aliases may resolve to a canonical model.</p>
     <div class="table-scroll" tabindex="0" aria-label="Search behavior table"><table><thead><tr><th>Query</th><th>Behavior</th></tr></thead><tbody><tr><td><code>BR-00155-042</code></td><td>One exact benchmark result</td></tr><tr><td><code>BR-00155</code></td><td>All GPT-5.5 benchmark records</td></tr><tr><td><code>OPNAI-55</code></td><td>All records associated with GPT-5.5</td></tr><tr><td><code>GPT-5.5</code></td><td>All records associated with GPT-5.5</td></tr><tr><td><code>DeepSWE</code></td><td>Matching DeepSWE benchmark records</td></tr></tbody></table></div>
+    <h3>Search operators</h3>
+    <p>Normal search remains available. Use field operators to restrict a search: <code>brand:</code> for a model provider; <code>benchmark:</code>; <code>record:</code>; <code>model:</code>; <code>metric:</code>; <code>date:</code> for an evaluation date; and <code>org:</code> for an associated provider, benchmark organization, evaluator, or source publisher.</p>
+    <p>Comma-separated values are alternatives within one field. Separate field operators must all match. Uppercase <code>OR</code> separates complete alternatives.</p>
+    <div class="table-scroll" tabindex="0" aria-label="Search operator examples"><table><thead><tr><th>Query</th><th>Behavior</th></tr></thead><tbody><tr><td><code>brand:Meta, Anthropic</code></td><td>Records for models from Meta or Anthropic</td></tr><tr><td><code>benchmark:GPQA metric:Accuracy</code></td><td>GPQA records using the Accuracy metric</td></tr><tr><td><code>record:1, 42</code></td><td>Records with model-specific sequence 1 or 42</td></tr><tr><td><code>date:2026-06</code></td><td>Records evaluated during June 2026</td></tr><tr><td><code>Muse Spark OR Opus 4.7</code></td><td>Records matching either model phrase</td></tr></tbody></table></div>
+    <p>Supported evaluation date forms are <code>YYYY</code>, <code>YYYY-MM</code>, and <code>YYYY-MM-DD</code>. Search operators are case-insensitive; the logical <code>OR</code> keyword must be uppercase.</p>
   </section>
 
   <section id="benchmark-versions"><h2>Benchmark Versions and Variants</h2>
