@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><% if (it.isDev) { %>DEV | <% } %><%= it.seo.title %></title>
+    <title><%= it.seo.title %></title>
     <meta name="description" content="<%= it.seo.description %>">
     <meta name="robots" content="<%= it.seo.robots %>">
     <meta name="application-name" content="Benchmark Registry">
@@ -22,9 +22,8 @@
     <script src="<%= it.assetPath('scripts/record-actions.js') %>" defer></script>
     <% if (it.production) { %><script defer src="/_vercel/insights/script.js"></script><% } %>
   </head>
-  <body<% if (it.isDev) { %> class="dev-mode"<% } %>>
+  <body>
     <div class="institutional-bar"></div>
-    <% if (it.isDev) { %><div class="dev-banner"><a href="/dev">Developer Server</a></div><% } %>
     <main class="page">
       <header class="site-header">
         <a class="site-title" href="/">BENCHMARK REGISTRY</a>

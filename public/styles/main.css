@@ -429,37 +429,6 @@ pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.dev-banner {
-  background: crimson;
-  color: #fff;
-  font-weight: bold;
-  font-size: 12px;
-  letter-spacing: 0.03em;
-  padding: 3px 10px;
-}
-.dev-banner a {
-  color: #fff;
-  text-decoration: none;
-}
-.dev-banner a:hover,
-.dev-banner a:focus-visible {
-  text-decoration: underline;
-}
-.dev-mode .institutional-bar {
-  background: crimson;
-  border-bottom-color: #7a0019;
-}
-.dev-status-ok {
-  border-left: 4px solid #1a6b1a;
-  padding: 4px 7px;
-  background: #eaf4ea;
-}
-.dev-status-error {
-  border-left: 4px solid #8b1a1a;
-  padding: 4px 7px;
-  background: #f4eaea;
-}
-
 @media (max-width: 640px) {
   :root {
     font-size: 13px;

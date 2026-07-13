@@ -15,15 +15,12 @@ import { registerDynamicResponseCaching } from './plugins/response-cache.js';
 import { registerSecurityHeaders } from './plugins/security.js';
 import indexRoutes from './routes/index.js';
 import feedbackRoutes from './routes/feedback.js';
-import devRoutes from './routes/dev.js';
 import { createAssetPath } from './web/assets.js';
 
 export interface CreateAppOptions {
   database?: Database;
-  databaseTarget?: string;
   closeDatabaseOnShutdown?: boolean;
   production?: boolean;
-  isDev?: boolean;
   runtimeDirectory?: string;
   adminAuth?: AdminAuthConfig;
   feedbackStore?: FeedbackStore;
@@ -32,7 +29,6 @@ export interface CreateAppOptions {
 export function createApp(options: CreateAppOptions = {}): FastifyInstance {
   const production =
     options.production ?? process.env.NODE_ENV === 'production';
-  const isDev = options.isDev ?? process.env.NODE_ENV === 'development';
   const app = Fastify({ logger: true });
   app.addContentTypeParser(
     'application/x-www-form-urlencoded',
@@ -65,7 +61,7 @@ export function createApp(options: CreateAppOptions = {}): FastifyInstance {
     engine: { eta },
     root: viewsDirectory,
     production,
-    defaultContext: { assetPath, isDev, production },
+    defaultContext: { assetPath, production },
   });
 
   void app.register(fastifyStatic, {
@@ -87,13 +83,6 @@ export function createApp(options: CreateAppOptions = {}): FastifyInstance {
     adminAuth: options.adminAuth,
   });
   void app.register(indexRoutes, { database });
-
-  if (isDev) {
-    void app.register(devRoutes, {
-      database,
-      databaseTarget: options.databaseTarget,
-    });
-  }
 
   if (database !== undefined && options.closeDatabaseOnShutdown !== false) {
     app.addHook('onClose', async () => {
