@@ -19,7 +19,7 @@ import { modelSlug } from '../web/seo.js';
 export const REGISTRY_PAGE_SIZE = 100;
 
 export interface PublicRegistryRecord {
-  rank: number | null;
+  rank: number;
   recordId: string;
   modelId: string;
   modelSlug: string;
@@ -403,13 +403,10 @@ export async function getRegistryRecords(
     'benchmark_versions.variant_name as benchmarkVariantName',
     'metrics.name as metricName',
     'benchmark_records.score_display as scoreDisplay',
-    sql<number | null>`case
-        when benchmark_records.score_value is null then null
-        else row_number() over (
-          order by benchmark_records.score_value desc nulls last,
-                   benchmark_records.record_id asc
-        )::integer
-      end`.as('rank'),
+    sql<number>`row_number() over (
+      order by benchmark_records.score_value desc nulls last,
+               benchmark_records.record_id asc
+    )::integer`.as('rank'),
     'benchmark_records.evaluation_date as evaluationDate',
     'sources.url as sourceUrl',
     'benchmark_records.status as recordStatus',

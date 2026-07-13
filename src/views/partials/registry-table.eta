@@ -20,7 +20,7 @@
       <% } %>
       <% it.records.forEach(function(record) { %>
         <tr>
-          <% if (it.showRank) { %><td><%= record.rank ?? '—' %></td><% } %>
+          <% if (it.showRank) { %><td><%= record.rank %></td><% } %>
           <td><a href="/records/<%= encodeURIComponent(record.recordId) %>"><code class="identifier"><%= record.recordId %></code></a> <button class="compact-action" type="button" data-copy-value="<%= record.recordId %>" data-default-label="Copy ID" aria-label="Copy record identifier <%= record.recordId %>">Copy ID</button></td>
           <td><a href="/models/<%= encodeURIComponent(record.modelSlug) %>"><%= record.modelName %></a></td>
           <td><a href="/benchmarks/<%= encodeURIComponent(record.benchmarkSlug) %>"><%= record.benchmarkName %></a></td>
