@@ -97,6 +97,7 @@ describe('production web delivery', () => {
     await writeFile(
       path.join(directory, 'asset-manifest.json'),
       JSON.stringify({
+        'favicon.svg': 'favicon.abcdef012345.svg',
         'styles/main.css': 'styles/main.0123456789ab.css',
       }),
     );
@@ -104,6 +105,7 @@ describe('production web delivery', () => {
     expect(assetPath('styles/main.css')).toBe(
       '/public/styles/main.0123456789ab.css',
     );
+    expect(assetPath('favicon.svg')).toBe('/public/favicon.abcdef012345.svg');
     expect(() => assetPath('styles/missing.css')).toThrow(
       'Asset manifest has no entry',
     );

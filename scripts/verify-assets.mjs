@@ -9,6 +9,7 @@ const manifest = JSON.parse(
   await readFile(path.join(outputDirectory, 'asset-manifest.json'), 'utf8'),
 );
 const generatedPath = manifest['styles/main.css'];
+const generatedFaviconPath = manifest['favicon.svg'];
 
 if (
   typeof generatedPath !== 'string' ||
@@ -18,9 +19,21 @@ if (
     'The asset manifest does not contain a hashed main stylesheet.',
   );
 }
+if (
+  typeof generatedFaviconPath !== 'string' ||
+  !/^favicon\.[a-f0-9]{12}\.svg$/.test(generatedFaviconPath)
+) {
+  throw new Error('The asset manifest does not contain a hashed favicon.');
+}
 
 const generatedFile = path.join(outputDirectory, 'public', generatedPath);
+const generatedFaviconFile = path.join(
+  outputDirectory,
+  'public',
+  generatedFaviconPath,
+);
 await access(generatedFile);
+await access(generatedFaviconFile);
 await access(path.join(outputDirectory, 'views', 'layout.eta'));
 
 const [sourceSize, generatedSize] = await Promise.all([

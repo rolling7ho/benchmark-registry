@@ -8,11 +8,13 @@ import { transform } from 'lightningcss';
 const projectRoot = fileURLToPath(new URL('..', import.meta.url));
 const sourcePublicDirectory = path.join(projectRoot, 'public');
 const sourceStylesheet = path.join(sourcePublicDirectory, 'styles', 'main.css');
+const sourceFavicon = path.join(sourcePublicDirectory, 'favicon.svg');
 const outputDirectory = path.join(projectRoot, 'dist');
 const outputPublicDirectory = path.join(outputDirectory, 'public');
 const outputStylesDirectory = path.join(outputPublicDirectory, 'styles');
 
 const sourceCss = await readFile(sourceStylesheet);
+const favicon = await readFile(sourceFavicon);
 const { code: minifiedCss } = transform({
   code: sourceCss,
   filename: sourceStylesheet,
@@ -24,19 +26,35 @@ const contentHash = createHash('sha256')
   .digest('hex')
   .slice(0, 12);
 const generatedStylesheet = `styles/main.${contentHash}.css`;
+const faviconHash = createHash('sha256')
+  .update(favicon)
+  .digest('hex')
+  .slice(0, 12);
+const generatedFavicon = `favicon.${faviconHash}.svg`;
 
 await mkdir(outputStylesDirectory, { recursive: true });
 await cp(sourcePublicDirectory, outputPublicDirectory, {
   recursive: true,
-  filter: (source) => path.resolve(source) !== path.resolve(sourceStylesheet),
+  filter: (source) =>
+    ![sourceStylesheet, sourceFavicon].some(
+      (excludedSource) => path.resolve(source) === path.resolve(excludedSource),
+    ),
 });
 await writeFile(
   path.join(outputPublicDirectory, generatedStylesheet),
   minifiedCss,
 );
+await writeFile(path.join(outputPublicDirectory, generatedFavicon), favicon);
 await writeFile(
   path.join(outputDirectory, 'asset-manifest.json'),
-  `${JSON.stringify({ 'styles/main.css': generatedStylesheet }, null, 2)}\n`,
+  `${JSON.stringify(
+    {
+      'favicon.svg': generatedFavicon,
+      'styles/main.css': generatedStylesheet,
+    },
+    null,
+    2,
+  )}\n`,
 );
 await cp(
   path.join(projectRoot, 'src', 'views'),

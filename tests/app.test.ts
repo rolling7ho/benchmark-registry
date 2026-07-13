@@ -35,11 +35,25 @@ describe('public application routes without a database', () => {
       '<meta name="viewport" content="width=device-width, initial-scale=1">',
     );
     expect(response.body).toContain('href="/public/styles/main.css"');
+    expect(response.body).toContain(
+      'rel="icon" href="/public/favicon.svg" type="image/svg+xml"',
+    );
     expect(response.body).toContain('class="table-scroll" tabindex="0"');
     expect(response.body).toContain(
       'Table may be scrolled horizontally on narrow displays.',
     );
     expect(response.headers['cache-control']).toBe('no-cache');
+  });
+
+  it('serves the institutional favicon', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/public/favicon.svg',
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('image/svg+xml');
+    expect(response.body).toContain('fill="#f5f3eb"');
+    expect(response.body).toContain('>B</text>');
   });
 
   it('serves readable development assets without immutable caching', async () => {
