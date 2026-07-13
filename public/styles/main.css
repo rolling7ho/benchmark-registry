@@ -37,7 +37,7 @@ body {
 }
 .site-title {
   color: #17365d;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: Arial, sans-serif;
   font-size: 23px;
   font-weight: bold;
   letter-spacing: 0.04em;
@@ -46,7 +46,7 @@ body {
 .site-description {
   margin-top: 1px;
   color: #333;
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: Arial, sans-serif;
 }
 h1 {
   color: #17365d;
