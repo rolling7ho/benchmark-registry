@@ -1,0 +1,42 @@
+<p class="table-scroll-notice">Table may be scrolled horizontally on narrow displays.</p>
+<div class="table-scroll" tabindex="0" aria-label="Benchmark registry records table">
+  <table class="registry-table">
+    <thead>
+      <tr>
+        <% if (it.rankOffset !== undefined) { %><th>Rank</th><% } %>
+        <th>Record No.</th>
+        <th>Model</th>
+        <th>Benchmark</th>
+        <th>Metric</th>
+        <th>Score</th>
+        <th>Eval Date</th>
+        <th>Source</th>
+        <th>Model ID</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (it.records.length === 0) { %>
+        <tr><td colspan="<%= it.rankOffset === undefined ? 8 : 9 %>" class="empty-state"><%= it.emptyMessage %></td></tr>
+      <% } %>
+      <% it.records.forEach(function(record, index) { %>
+        <tr>
+          <% if (it.rankOffset !== undefined) { %><td><%= it.rankOffset + index + 1 %></td><% } %>
+          <td><a href="/records/<%= encodeURIComponent(record.recordId) %>"><code class="identifier"><%= record.recordId %></code></a></td>
+          <td><a href="/models/<%= encodeURIComponent(record.modelId) %>"><%= record.modelName %></a></td>
+          <td><%= record.benchmarkName %></td>
+          <td><%= record.metricName %></td>
+          <td><%= record.scoreDisplay %></td>
+          <td><%= record.evaluationDate ?? 'Unknown' %></td>
+          <td>
+            <% if (record.sourceUrl !== null) { %>
+              <a href="<%= record.sourceUrl %>" target="_blank" rel="noopener noreferrer">View</a>
+            <% } else { %>
+              Unavailable
+            <% } %>
+          </td>
+          <td><code><%= record.modelId %></code></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,56 @@
+{
+  "records": [
+    {
+      "modelId": "OPNAI-56SL",
+      "benchmarkSlug": "aa-intelligence-index",
+      "evaluatorSlug": "artificial-analysis",
+      "metricSlug": "overall",
+      "scoreDisplay": "59",
+      "scoreValue": 59,
+      "evaluationDate": null,
+      "reportedDate": null,
+      "sourceUrl": "https://artificialanalysis.ai/models/gpt-5-6-sol",
+      "reportType": "INDEPENDENT",
+      "notes": "GPT-5.6 Sol (max) configuration. Independent test run by Artificial Analysis on dedicated hardware, not OpenAI's own reporting."
+    },
+    {
+      "modelId": "OPNAI-56TR",
+      "benchmarkSlug": "aa-intelligence-index",
+      "evaluatorSlug": "artificial-analysis",
+      "metricSlug": "overall",
+      "scoreDisplay": "55",
+      "scoreValue": 55,
+      "evaluationDate": null,
+      "reportedDate": null,
+      "sourceUrl": "https://artificialanalysis.ai/models/gpt-5-6-terra",
+      "reportType": "INDEPENDENT",
+      "notes": "GPT-5.6 Terra (max) configuration. Independent test run by Artificial Analysis on dedicated hardware, not OpenAI's own reporting."
+    },
+    {
+      "modelId": "OPNAI-56LN",
+      "benchmarkSlug": "aa-intelligence-index",
+      "evaluatorSlug": "artificial-analysis",
+      "metricSlug": "overall",
+      "scoreDisplay": "51",
+      "scoreValue": 51,
+      "evaluationDate": null,
+      "reportedDate": null,
+      "sourceUrl": "https://artificialanalysis.ai/models/gpt-5-6-luna",
+      "reportType": "INDEPENDENT",
+      "notes": "GPT-5.6 Luna (max) configuration. Independent test run by Artificial Analysis on dedicated hardware, not OpenAI's own reporting."
+    },
+    {
+      "modelId": "ANTHR-FB5",
+      "benchmarkSlug": "aa-intelligence-index",
+      "evaluatorSlug": "artificial-analysis",
+      "metricSlug": "overall",
+      "scoreDisplay": "60",
+      "scoreValue": 60,
+      "evaluationDate": null,
+      "reportedDate": null,
+      "sourceUrl": "https://artificialanalysis.ai/models/claude-fable-5",
+      "reportType": "INDEPENDENT",
+      "notes": "Claude Fable 5 (Adaptive Reasoning, Max Effort, Opus 4.8 Fallback) configuration. Independent test run by Artificial Analysis on dedicated hardware, not Anthropic's own reporting."
+    }
+  ]
+}

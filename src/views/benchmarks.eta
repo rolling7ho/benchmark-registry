@@ -1,0 +1,4 @@
+<% layout('layout.eta') %><h1>Benchmarks</h1><p class="table-scroll-notice">Table may be scrolled horizontally on narrow displays.</p><div class="table-scroll" tabindex="0" aria-label="Benchmarks table"><table class="browse-table"><thead><tr><th>Benchmark</th><th>Version</th><th>Organization</th><th>Status</th><th>Records</th></tr></thead><tbody>
+<% if (it.benchmarks.length === 0) { %><tr><td colspan="5" class="empty-state">No benchmarks are currently available.</td></tr><% } %>
+<% it.benchmarks.forEach(function(benchmark) { %><tr><td><a href="/benchmarks/<%= encodeURIComponent(benchmark.slug) %>"><%= benchmark.name %></a></td><td><%= benchmark.version ?? 'Unknown' %></td><td><%= benchmark.organizationName ?? 'Unknown' %></td><td><%= benchmark.status %></td><td><%= benchmark.recordCount %></td></tr><% }) %>
+</tbody></table></div>

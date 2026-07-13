@@ -1,0 +1,39 @@
+<% layout('layout.eta') %>
+<% if (it.heading !== null) { %><h1><%= it.heading %></h1><% } %>
+<% if (it.databaseUpdate !== null) { %>
+  <p class="database-update">Last database update: <%= it.databaseUpdate %></p>
+<% } %>
+<% if (it.leaderboard) { %>
+  <form class="leaderboard-filters" method="get" action="/">
+    <div class="filter-field">
+      <label for="benchmark-filter">Benchmark</label>
+      <select id="benchmark-filter" name="benchmark">
+        <option value="">All benchmarks</option>
+        <% it.leaderboard.benchmarks.forEach(function(benchmark) { %>
+          <option value="<%= benchmark.value %>"<% if (benchmark.value === it.leaderboard.selectedBenchmark) { %> selected<% } %>><%= benchmark.label %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="metric-filter">Metric</label>
+      <select id="metric-filter" name="metric">
+        <option value="">All metrics</option>
+        <% it.leaderboard.metrics.forEach(function(metric) { %>
+          <option value="<%= metric.value %>"<% if (metric.value === it.leaderboard.selectedMetric) { %> selected<% } %>><%= metric.label %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="order-filter">Score order</label>
+      <select id="order-filter" name="order">
+        <option value="desc"<% if (it.leaderboard.order === 'desc') { %> selected<% } %>>Highest to lowest</option>
+        <option value="asc"<% if (it.leaderboard.order === 'asc') { %> selected<% } %>>Lowest to highest</option>
+      </select>
+    </div>
+    <button type="submit">Apply filters</button>
+  </form>
+  <p class="leaderboard-notice">Scores from different benchmarks, metrics, versions, or evaluation configurations are not necessarily comparable. Use the filters to narrow the records before drawing comparisons.</p>
+<% } %>
+<% if (it.statusNotice !== null) { %><p class="status-notice"><%= it.statusNotice %></p><% } %>
+<%~ include('partials/registry-table.eta', { records: it.records, emptyMessage: it.emptyMessage, rankOffset: it.leaderboard?.rankOffset }) %>
+<% if (it.pagination !== null) { %><%~ include('partials/pagination.eta', it.pagination) %><% } %>

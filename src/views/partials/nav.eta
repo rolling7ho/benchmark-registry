@@ -1,0 +1,13 @@
+<nav aria-label="Primary navigation">
+  <a href="/models">Models</a>
+  <span aria-hidden="true">|</span>
+  <a href="/benchmarks">Benchmarks</a>
+  <span aria-hidden="true">|</span>
+  <a href="/organizations">Organizations</a>
+  <span aria-hidden="true">|</span>
+  <a href="/recent">Recent Records</a>
+  <span aria-hidden="true">|</span>
+  <a href="/sources">Sources</a>
+  <span aria-hidden="true">|</span>
+  <a href="/docs">Documentation</a>
+</nav>

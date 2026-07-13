@@ -1,0 +1,329 @@
+import {
+  sql,
+  type Expression,
+  type ExpressionBuilder,
+  type SelectQueryBuilder,
+  type SqlBool,
+} from 'kysely';
+
+import type { RegistryStatus } from './constants.js';
+import type { Database } from './database.js';
+import type { DatabaseSchema } from './types.js';
+import { formatBenchmarkDisplay } from '../registry/benchmark-display.js';
+
+export const REGISTRY_PAGE_SIZE = 100;
+
+export interface PublicRegistryRecord {
+  recordId: string;
+  modelId: string;
+  modelName: string;
+  benchmarkName: string;
+  metricName: string;
+  scoreDisplay: string;
+  evaluationDate: string | null;
+  sourceUrl: string | null;
+  recordStatus: RegistryStatus;
+}
+
+export interface RegistryRecordPage {
+  records: PublicRegistryRecord[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export type LeaderboardOrder = 'asc' | 'desc';
+
+export interface LeaderboardOption {
+  value: string;
+  label: string;
+}
+
+export interface LeaderboardOptions {
+  benchmarks: LeaderboardOption[];
+  metrics: LeaderboardOption[];
+}
+
+export type RegistryRecordFilter =
+  | { kind: 'RECENT' }
+  | {
+      kind: 'LEADERBOARD';
+      benchmarkSlug: string | null;
+      metricSlug: string | null;
+      order: LeaderboardOrder;
+    }
+  | { kind: 'EXACT_RECORD'; recordId: string }
+  | { kind: 'MODEL'; modelInternalId: string }
+  | { kind: 'BENCHMARK'; benchmarkInternalId: string }
+  | { kind: 'BENCHMARK_VERSION'; benchmarkVersionInternalId: string }
+  | { kind: 'ORGANIZATION'; organizationInternalId: string }
+  | { kind: 'METRIC'; metricInternalId: string }
+  | { kind: 'GENERAL'; query: string };
+
+type JoinedQuery = SelectQueryBuilder<
+  DatabaseSchema,
+  | 'benchmark_records'
+  | 'models'
+  | 'benchmarks'
+  | 'benchmark_versions'
+  | 'metrics'
+  | 'sources'
+  | 'organizations',
+  object
+>;
+
+function joinedRecords(db: Database): JoinedQuery {
+  return db
+    .selectFrom('benchmark_records')
+    .innerJoin('models', 'models.id', 'benchmark_records.model_id')
+    .innerJoin('benchmarks', 'benchmarks.id', 'benchmark_records.benchmark_id')
+    .innerJoin(
+      'benchmark_versions',
+      'benchmark_versions.id',
+      'benchmark_records.benchmark_version_id',
+    )
+    .innerJoin('metrics', 'metrics.id', 'benchmark_records.metric_id')
+    .innerJoin('sources', 'sources.id', 'benchmark_records.source_id')
+    .innerJoin('organizations', 'organizations.id', 'models.organization_id');
+}
+
+function escapedLikePattern(query: string): string {
+  return `%${query.replace(/[\\%_]/g, '\\$&')}%`;
+}
+
+function generalSearchExpression(
+  eb: ExpressionBuilder<
+    DatabaseSchema,
+    | 'benchmark_records'
+    | 'models'
+    | 'benchmarks'
+    | 'benchmark_versions'
+    | 'metrics'
+    | 'sources'
+    | 'organizations'
+  >,
+  query: string,
+): Expression<SqlBool> {
+  const pattern = escapedLikePattern(query);
+  const matches = (column: string): Expression<SqlBool> =>
+    sql<boolean>`${sql.ref(column)} ilike ${pattern} escape '\\'`;
+
+  return eb.or([
+    matches('benchmark_records.record_id'),
+    matches('models.model_id'),
+    matches('models.official_name'),
+    matches('benchmarks.name'),
+    matches('benchmark_versions.canonical_reference'),
+    matches('benchmark_versions.version_label'),
+    matches('benchmark_versions.variant_name'),
+    matches('organizations.name'),
+    matches('metrics.name'),
+    eb.exists(
+      eb
+        .selectFrom('model_aliases')
+        .select('model_aliases.id')
+        .whereRef('model_aliases.model_id', '=', 'models.id')
+        .where((aliasEb) =>
+          aliasEb.or([
+            sql<boolean>`model_aliases.alias ilike ${pattern} escape '\\'`,
+            sql<boolean>`model_aliases.normalized_alias ilike ${pattern} escape '\\'`,
+            sql<boolean>`model_aliases.compact_alias ilike ${pattern} escape '\\'`,
+          ]),
+        ),
+    ),
+  ]);
+}
+
+function applyFilter(
+  query: JoinedQuery,
+  filter: RegistryRecordFilter,
+): JoinedQuery {
+  switch (filter.kind) {
+    case 'RECENT':
+      return query.where('benchmark_records.status', '=', 'ACTIVE');
+    case 'LEADERBOARD': {
+      let leaderboardQuery = query.where(
+        'benchmark_records.status',
+        '=',
+        'ACTIVE',
+      );
+      if (filter.benchmarkSlug !== null) {
+        leaderboardQuery = leaderboardQuery.where(
+          'benchmarks.slug',
+          '=',
+          filter.benchmarkSlug,
+        );
+      }
+      if (filter.metricSlug !== null) {
+        leaderboardQuery = leaderboardQuery.where(
+          'metrics.slug',
+          '=',
+          filter.metricSlug,
+        );
+      }
+      return leaderboardQuery;
+    }
+    case 'EXACT_RECORD':
+      return query.where('benchmark_records.record_id', '=', filter.recordId);
+    case 'MODEL':
+      return query
+        .where('benchmark_records.model_id', '=', filter.modelInternalId)
+        .where('benchmark_records.status', '=', 'ACTIVE');
+    case 'BENCHMARK':
+      return query
+        .where(
+          'benchmark_records.benchmark_id',
+          '=',
+          filter.benchmarkInternalId,
+        )
+        .where('benchmark_records.status', '=', 'ACTIVE');
+    case 'BENCHMARK_VERSION':
+      return query
+        .where(
+          'benchmark_records.benchmark_version_id',
+          '=',
+          filter.benchmarkVersionInternalId,
+        )
+        .where('benchmark_records.status', '=', 'ACTIVE');
+    case 'ORGANIZATION':
+      return query
+        .where('models.organization_id', '=', filter.organizationInternalId)
+        .where('benchmark_records.status', '=', 'ACTIVE');
+    case 'METRIC':
+      return query
+        .where('benchmark_records.metric_id', '=', filter.metricInternalId)
+        .where('benchmark_records.status', '=', 'ACTIVE');
+    case 'GENERAL':
+      return query
+        .where('benchmark_records.status', '=', 'ACTIVE')
+        .where((eb) => generalSearchExpression(eb, filter.query));
+  }
+}
+
+function safeSourceUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:'
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function isoDate(value: unknown): string | null {
+  if (value === null) return null;
+  if (value instanceof Date) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Manila',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+      .formatToParts(value)
+      .reduce<Record<string, string>>((result, part) => {
+        result[part.type] = part.value;
+        return result;
+      }, {});
+    return `${parts.year}-${parts.month}-${parts.day}`;
+  }
+  if (typeof value === 'string') return value.slice(0, 10);
+  return null;
+}
+
+export async function getRegistryRecords(
+  db: Database,
+  filter: RegistryRecordFilter,
+  page = 1,
+  pageSize = REGISTRY_PAGE_SIZE,
+): Promise<RegistryRecordPage> {
+  const filtered = applyFilter(joinedRecords(db), filter);
+  const countRow = await filtered
+    .clearSelect()
+    .select((eb) => eb.fn.countAll<string>().as('count'))
+    .executeTakeFirstOrThrow();
+  const total = Number(countRow.count);
+  const effectivePage = Math.min(
+    page,
+    Math.max(1, Math.ceil(total / pageSize)),
+  );
+  const offset = (effectivePage - 1) * pageSize;
+
+  let resultQuery = filtered
+    .clearSelect()
+    .select([
+      'benchmark_records.record_id as recordId',
+      'models.model_id as modelId',
+      'models.official_name as modelName',
+      'benchmarks.name as benchmarkName',
+      'benchmark_versions.version_label as benchmarkVersionLabel',
+      'benchmark_versions.variant_name as benchmarkVariantName',
+      'metrics.name as metricName',
+      'benchmark_records.score_display as scoreDisplay',
+      'benchmark_records.evaluation_date as evaluationDate',
+      'sources.url as sourceUrl',
+      'benchmark_records.status as recordStatus',
+    ]);
+
+  if (filter.kind === 'RECENT') {
+    resultQuery = resultQuery
+      .orderBy('benchmark_records.created_at', 'desc')
+      .orderBy('benchmark_records.record_id', 'asc');
+  } else if (filter.kind === 'LEADERBOARD') {
+    resultQuery = resultQuery
+      .orderBy(
+        sql`benchmark_records.score_value ${sql.raw(filter.order)} nulls last`,
+      )
+      .orderBy('benchmark_records.record_id', 'asc');
+  } else {
+    resultQuery = resultQuery
+      .orderBy(sql`benchmark_records.evaluation_date desc nulls last`)
+      .orderBy('benchmark_records.record_id', 'asc');
+  }
+
+  const rows = await resultQuery.limit(pageSize).offset(offset).execute();
+
+  return {
+    records: rows.map((row) => ({
+      ...row,
+      benchmarkName: formatBenchmarkDisplay({
+        familyName: row.benchmarkName,
+        versionLabel: row.benchmarkVersionLabel,
+        variantName: row.benchmarkVariantName,
+      }),
+      evaluationDate: isoDate(row.evaluationDate),
+      sourceUrl: safeSourceUrl(row.sourceUrl),
+    })),
+    page: effectivePage,
+    pageSize,
+    total,
+  };
+}
+
+export async function getLeaderboardOptions(
+  db: Database,
+): Promise<LeaderboardOptions> {
+  const [benchmarks, metrics] = await Promise.all([
+    db
+      .selectFrom('benchmark_records')
+      .innerJoin(
+        'benchmarks',
+        'benchmarks.id',
+        'benchmark_records.benchmark_id',
+      )
+      .select(['benchmarks.slug as value', 'benchmarks.name as label'])
+      .distinct()
+      .where('benchmark_records.status', '=', 'ACTIVE')
+      .orderBy('benchmarks.name', 'asc')
+      .execute(),
+    db
+      .selectFrom('benchmark_records')
+      .innerJoin('metrics', 'metrics.id', 'benchmark_records.metric_id')
+      .select(['metrics.slug as value', 'metrics.name as label'])
+      .distinct()
+      .where('benchmark_records.status', '=', 'ACTIVE')
+      .orderBy('metrics.name', 'asc')
+      .execute(),
+  ]);
+  return { benchmarks, metrics };
+}

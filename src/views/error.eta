@@ -1,0 +1,1 @@
+<% layout('layout.eta') %><h1><%= it.statusCode %> — <%= it.message %></h1><p>The requested registry operation could not be completed.</p>

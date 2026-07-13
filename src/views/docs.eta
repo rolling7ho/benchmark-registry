@@ -1,0 +1,81 @@
+<% layout('layout.eta') %>
+<article class="documentation">
+  <h1>Registry Documentation</h1>
+  <nav class="contents" aria-label="Documentation sections">
+    <a href="#about">About</a> · <a href="#record-numbers">Record Numbers</a> · <a href="#model-ids">Model IDs</a> · <a href="#search">Search</a> · <a href="#benchmark-versions">Benchmark Versions</a> · <a href="#evaluation-context">Evaluation Context</a> · <a href="#model-snapshots">Model Snapshots</a> · <a href="#comparability">Comparing Records</a> · <a href="#sources">Sources</a> · <a href="#record-statuses">Record Statuses</a> · <a href="#identifier-stability">Identifier Stability</a> · <a href="#disclaimer">Disclaimer</a> · <a href="#contact-us">Contact Us</a>
+  </nav>
+
+  <section id="about"><h2>About Benchmark Registry</h2>
+    <p>Benchmark Registry is a public searchable database of artificial intelligence benchmark results. One benchmark record represents one reported metric result.</p>
+    <p>The registry combines results reported in provider reports, technical reports, system cards, papers, leaderboards, model cards, provider publications, and credible independent evaluations.</p>
+  </section>
+
+  <section id="record-numbers"><h2>Understanding Record Numbers</h2>
+    <p>A Benchmark Record Identifier is the stable public reference for one reported metric result. Examples include <code>BR-00155-042</code>, <code>BR-002O48-017</code>, and <code>BR-00335F-006</code>.</p>
+    <pre class="identifier-diagram">BR-00155-042
+BR  = Benchmark Record
+001 = OpenAI provider namespace
+55  = Model Number 55, representing GPT-5.5
+042 = result sequence 042 for this model-specific record prefix</pre>
+    <p>Provider-specific encodings vary. Anthropic tier codes, for example, occur before the Model Number. There is no universal model format.</p>
+  </section>
+
+  <section id="model-ids"><h2>Understanding Model IDs</h2>
+    <p>Model Identifiers are stable registry references. Examples: <code>OPNAI-56</code> — GPT-5.6; <code>ANTHR-O48</code> — Claude Opus 4.8; <code>GOOGL-G35F</code> — Gemini 3.5 Flash; <code>META-MS</code> — Muse Spark; and <code>XAI-G45</code> — Grok 4.5.</p>
+    <p>Approved numeric Model Numbers omit the decimal point: <code>5.6 → 56</code>, <code>4.8 → 48</code>, and <code>3.5 → 35</code>.</p>
+    <div class="table-scroll" tabindex="0" aria-label="Tier code table"><table><thead><tr><th>Tier</th><th>Code</th></tr></thead><tbody><tr><td>Opus</td><td><code>O</code></td></tr><tr><td>Sonnet</td><td><code>S</code></td></tr><tr><td>Haiku</td><td><code>H</code></td></tr><tr><td>Muse Spark</td><td><code>MS</code></td></tr><tr><td>Composer</td><td><code>C</code></td></tr><tr><td>Pro</td><td><code>P</code></td></tr><tr><td>Flash</td><td><code>F</code></td></tr></tbody></table></div>
+    <p>Identifier construction is provider-specific. Users do not need to understand Model Identifiers to search by official model name.</p>
+    <h3>Provider identifier reference</h3>
+    <p class="table-scroll-notice">Table may be scrolled horizontally on narrow displays.</p>
+    <div class="table-scroll" tabindex="0" aria-label="Provider identifier reference table"><table class="reference-table"><thead><tr><th>Provider</th><th>Prefix</th><th>BR Namespace</th><th>Model Pattern</th><th>Record Prefix Pattern</th></tr></thead><tbody>
+      <% it.providers.forEach(function(provider) { %><tr><td><%= provider.displayName %></td><td><code><%= provider.providerPrefix %></code></td><td><code><%= provider.brNamespace %></code></td><td><code><%= provider.modelPattern %></code></td><td><code><%= provider.recordPrefixPattern %></code></td></tr><% }) %>
+    </tbody></table></div>
+  </section>
+
+  <section id="search"><h2>Search Behavior</h2>
+    <p>Search is case-insensitive. Recognized aliases may resolve to a canonical model.</p>
+    <div class="table-scroll" tabindex="0" aria-label="Search behavior table"><table><thead><tr><th>Query</th><th>Behavior</th></tr></thead><tbody><tr><td><code>BR-00155-042</code></td><td>One exact benchmark result</td></tr><tr><td><code>BR-00155</code></td><td>All GPT-5.5 benchmark records</td></tr><tr><td><code>OPNAI-55</code></td><td>All records associated with GPT-5.5</td></tr><tr><td><code>GPT-5.5</code></td><td>All records associated with GPT-5.5</td></tr><tr><td><code>DeepSWE</code></td><td>Matching DeepSWE benchmark records</td></tr></tbody></table></div>
+  </section>
+
+  <section id="benchmark-versions"><h2>Benchmark Versions and Variants</h2>
+    <p>A benchmark family is the recognized benchmark identity. <code>GPQA</code> and <code>SWE-bench</code> are families; <code>GPQA Diamond</code> and <code>SWE-bench Verified</code> identify known variants. Searches may resolve a family across its versions or one exact known version or variant.</p>
+    <p>Two records using the same benchmark family may have used different benchmark variants or evaluation settings. A missing version remains explicitly unspecified; it is not represented as a fabricated numeric version.</p>
+  </section>
+
+  <section id="evaluation-context"><h2>Evaluation Context</h2>
+    <p>Where sources support it, records preserve shots, reasoning mode, reasoning effort, pass count, agent scaffold, evaluation harness, sampling values, and other structured settings. Equivalent configurations share one stable internal reference through an exact canonical-data fingerprint.</p>
+    <p><strong>Unknown means the registry does not currently have sufficient source-supported information. Unknown does not mean a default value was used.</strong></p>
+  </section>
+
+  <section id="model-snapshots"><h2>Model Snapshots</h2>
+    <p>A canonical model may be evaluated through a dated or provider-specific model snapshot. For example, canonical model <code>OPNAI-55</code> may have an explicitly reported provider model identifier such as <code>gpt-5.5-2026-06-18</code>. Snapshot attribution is preserved only when reported; not all providers expose snapshot identifiers.</p>
+  </section>
+
+  <section id="comparability"><h2>Comparing Benchmark Records</h2>
+    <p>The home page can order reported records by their stored numeric score. This ordering is not a normalized model ranking: scores from different benchmarks or metrics may use different scales and meanings.</p>
+    <p>Benchmark Registry does not assume that records sharing a benchmark name are directly comparable. Benchmark variant, evaluation configuration, model snapshot, and evaluator may affect a reported result. Use the benchmark and metric filters to narrow the table, then review each record's evaluation context before drawing comparisons.</p>
+    <p>Any structural compatibility assessment is conservative data-integrity support. It is not a scientific or statistical conclusion and does not rank models.</p>
+  </section>
+
+  <section id="sources"><h2>Sources</h2>
+    <p>Benchmark results link to their underlying sources. Accepted categories include provider reports, system cards, technical reports, papers, official leaderboards, model cards, provider pages, and credible independent evaluations.</p>
+    <p>Source attribution and independent reproduction are different concepts. The registry does not claim to independently verify every reported result.</p>
+  </section>
+
+  <section id="record-statuses"><h2>Record Statuses</h2>
+    <dl><dt><code>ACTIVE</code></dt><dd>The record is currently part of the active registry.</dd><dt><code>WITHDRAWN</code></dt><dd>The record has been withdrawn but remains reserved and may remain searchable.</dd><dt><code>SUPERSEDED</code></dt><dd>A newer or corrected record has replaced the record.</dd><dt><code>ERRONEOUS</code></dt><dd>The record contains a known material error.</dd><dt><code>ARCHIVED</code></dt><dd>The record is retained for historical reference.</dd></dl>
+    <p>Identifiers are not reused.</p>
+  </section>
+
+  <section id="identifier-stability"><h2>Identifier Stability</h2>
+    <p>Published Model Identifiers and Benchmark Record Identifiers are stored public references. Generation rules apply only when new identifiers are assigned. Existing identifiers are not recomputed when generation logic changes. Model renames do not automatically create a new identifier, and withdrawn identifiers are not reassigned.</p>
+  </section>
+
+  <section id="disclaimer"><h2>Registry Disclaimer</h2>
+    <p>Benchmark Registry stores benchmark results as reported by identified sources. Inclusion in the registry does not constitute endorsement of a model, provider, benchmark, evaluation methodology, or reported result. Unless explicitly stated, Benchmark Registry has not independently reproduced the evaluation.</p>
+  </section>
+
+  <section id="contact-us"><h2>Contact Us</h2>
+    <p>X: <a href="https://x.com/rolling7ho">@rolling7ho</a></p>
+  </section>
+</article>

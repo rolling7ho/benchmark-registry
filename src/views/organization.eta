@@ -1,0 +1,2 @@
+<% layout('layout.eta') %><h1><%= it.organization.name %></h1><dl class="record-metadata"><dt>Provider prefix</dt><dd><code><%= it.organization.providerPrefix %></code></dd><dt>Benchmark Record namespace</dt><dd><code><%= it.organization.brNamespace %></code></dd></dl>
+<%~ include('partials/registry-table.eta', { records: it.records, emptyMessage: it.emptyMessage }) %><%~ include('partials/pagination.eta', it.pagination) %>

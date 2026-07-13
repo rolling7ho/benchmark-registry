@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= it.title %></title>
+    <link rel="stylesheet" href="<%= it.assetPath('styles/main.css') %>">
+  </head>
+  <body>
+    <div class="institutional-bar"></div>
+    <main class="page">
+      <header class="site-header">
+        <a class="site-title" href="/">BENCHMARK REGISTRY</a>
+        <div class="site-description">Public Artificial Intelligence Benchmark Records Database</div>
+      </header>
+      <%~ include('partials/search-form.eta', { query: it.query ?? '' }) %>
+      <%~ include('partials/nav.eta') %>
+      <%~ it.body %>
+      <footer>
+        <hr>
+        <small>Benchmark Registry — Registry records are provided for reference purposes.</small>
+      </footer>
+    </main>
+  </body>
+</html>

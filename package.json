@@ -1,0 +1,63 @@
+{
+  "name": "benchmark-registry",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Production foundation for the Benchmark Registry.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "pnpm@11.2.2",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "clean": "node scripts/clean.mjs",
+    "build:server": "tsc -p tsconfig.build.json",
+    "build:assets": "node scripts/build-assets.mjs",
+    "verify:assets": "node scripts/verify-assets.mjs",
+    "build": "pnpm clean && pnpm build:server && pnpm build:assets && pnpm verify:assets",
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "verify:integration": "pnpm test:integration",
+    "db:migrate": "node-pg-migrate up --migrations-dir migrations --database-url-var DATABASE_URL --tsx",
+    "db:rollback": "node-pg-migrate down --migrations-dir migrations --database-url-var DATABASE_URL --tsx",
+    "db:create-migration": "node-pg-migrate create --migrations-dir migrations --migration-file-language ts --tsx",
+    "db:seed": "tsx src/scripts/seed-organizations.ts",
+    "db:seed:test-data": "tsx src/scripts/seed-test-data.ts",
+    "registry": "tsx src/cli/index.ts"
+  },
+  "dependencies": {
+    "@fastify/compress": "9.0.0",
+    "@fastify/helmet": "13.1.0",
+    "@fastify/static": "10.1.0",
+    "@fastify/view": "12.0.0",
+    "cheerio": "1.2.0",
+    "dotenv": "17.4.2",
+    "eta": "4.6.0",
+    "fastify": "5.10.0",
+    "kysely": "0.29.3",
+    "pdfjs-dist": "6.1.200",
+    "pg": "8.22.0",
+    "undici": "7.28.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.1.1",
+    "@types/pg": "8.20.0",
+    "eslint": "10.7.0",
+    "lightningcss": "1.32.0",
+    "node-pg-migrate": "8.0.4",
+    "prettier": "3.9.5",
+    "tsx": "4.23.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.63.0",
+    "vitest": "4.1.10"
+  }
+}

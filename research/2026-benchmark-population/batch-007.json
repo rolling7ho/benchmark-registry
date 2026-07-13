@@ -1,0 +1,69 @@
+{
+  "records": [
+    {
+      "modelId": "XAI-G45",
+      "benchmarkSlug": "aa-intelligence-index",
+      "evaluatorSlug": "artificial-analysis",
+      "metricSlug": "overall",
+      "scoreDisplay": "54",
+      "scoreValue": 54,
+      "evaluationDate": null,
+      "reportedDate": null,
+      "sourceUrl": "https://artificialanalysis.ai/models/grok-4-5",
+      "reportType": "INDEPENDENT",
+      "notes": "Grok 4.5 (high) configuration. Composite index across 9 evaluations (GDPval-AA v2, tau3-Banking, Terminal-Bench v2.1, SciCode, HLE, GPQA Diamond, CritPt, AA-Omniscience, AA-LCR). Independent test run by Artificial Analysis on dedicated hardware, not xAI's own reporting."
+    },
+    {
+      "modelId": "XAI-G45",
+      "benchmarkSlug": "aa-omniscience",
+      "evaluatorSlug": "artificial-analysis",
+      "metricSlug": "overall",
+      "scoreDisplay": "26.4",
+      "scoreValue": 26.4,
+      "evaluationDate": null,
+      "reportedDate": null,
+      "sourceUrl": "https://artificialanalysis.ai/models/grok-4-5",
+      "reportType": "INDEPENDENT",
+      "notes": "Grok 4.5 (high) configuration. Knowledge reliability/hallucination index, range -100 to 100. Independent test run by Artificial Analysis."
+    },
+    {
+      "modelId": "GOOGL-G35F",
+      "benchmarkSlug": "aa-intelligence-index",
+      "evaluatorSlug": "artificial-analysis",
+      "metricSlug": "overall",
+      "scoreDisplay": "50",
+      "scoreValue": 50,
+      "evaluationDate": null,
+      "reportedDate": null,
+      "sourceUrl": "https://artificialanalysis.ai/models/gemini-3-5-flash",
+      "reportType": "INDEPENDENT",
+      "notes": "Gemini 3.5 Flash (high) configuration. Independent test run by Artificial Analysis on dedicated hardware, not Google's own reporting."
+    },
+    {
+      "modelId": "GOOGL-G35F",
+      "benchmarkSlug": "aa-omniscience",
+      "evaluatorSlug": "artificial-analysis",
+      "metricSlug": "overall",
+      "scoreDisplay": "22.7",
+      "scoreValue": 22.7,
+      "evaluationDate": null,
+      "reportedDate": null,
+      "sourceUrl": "https://artificialanalysis.ai/models/grok-4-5",
+      "reportType": "INDEPENDENT",
+      "notes": "Gemini 3.5 Flash score as embedded in the Artificial Analysis Omniscience Index chart on the Grok 4.5 model page (multi-model leaderboard dataset shown there); not independently re-fetched from a dedicated Gemini 3.5 Flash Omniscience page."
+    },
+    {
+      "modelId": "ANTHR-S5",
+      "benchmarkSlug": "aa-intelligence-index",
+      "evaluatorSlug": "artificial-analysis",
+      "metricSlug": "overall",
+      "scoreDisplay": "53",
+      "scoreValue": 53,
+      "evaluationDate": null,
+      "reportedDate": null,
+      "sourceUrl": "https://artificialanalysis.ai/models/claude-sonnet-5",
+      "reportType": "INDEPENDENT",
+      "notes": "Claude Sonnet 5 (Adaptive Reasoning, Max Effort) configuration. Independent test run by Artificial Analysis on dedicated hardware, not Anthropic's own reporting."
+    }
+  ]
+}

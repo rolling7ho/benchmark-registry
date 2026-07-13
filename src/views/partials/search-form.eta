@@ -1,0 +1,5 @@
+<form class="search-form" action="/search" method="get">
+  <label for="registry-search">Search:</label>
+  <input id="registry-search" name="q" type="search" maxlength="256" value="<%= it.query %>">
+  <button type="submit">Search</button>
+</form>
