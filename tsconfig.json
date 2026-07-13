@@ -20,6 +20,7 @@
     "api/**/*.ts",
     "src/**/*.ts",
     "migrations/**/*.ts",
+    "scripts/seo-audit.ts",
     "tests/**/*.ts",
     "vitest*.config.ts"
   ],

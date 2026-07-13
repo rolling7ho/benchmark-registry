@@ -9,12 +9,19 @@ const projectRoot = fileURLToPath(new URL('..', import.meta.url));
 const sourcePublicDirectory = path.join(projectRoot, 'public');
 const sourceStylesheet = path.join(sourcePublicDirectory, 'styles', 'main.css');
 const sourceFavicon = path.join(sourcePublicDirectory, 'favicon.svg');
+const sourceScript = path.join(
+  sourcePublicDirectory,
+  'scripts',
+  'record-actions.js',
+);
 const outputDirectory = path.join(projectRoot, 'dist');
 const outputPublicDirectory = path.join(outputDirectory, 'public');
 const outputStylesDirectory = path.join(outputPublicDirectory, 'styles');
+const outputScriptsDirectory = path.join(outputPublicDirectory, 'scripts');
 
 const sourceCss = await readFile(sourceStylesheet);
 const favicon = await readFile(sourceFavicon);
+const script = await readFile(sourceScript);
 const { code: minifiedCss } = transform({
   code: sourceCss,
   filename: sourceStylesheet,
@@ -31,12 +38,20 @@ const faviconHash = createHash('sha256')
   .digest('hex')
   .slice(0, 12);
 const generatedFavicon = `favicon.${faviconHash}.svg`;
+const scriptHash = createHash('sha256')
+  .update(script)
+  .digest('hex')
+  .slice(0, 12);
+const generatedScript = `scripts/record-actions.${scriptHash}.js`;
 
-await mkdir(outputStylesDirectory, { recursive: true });
+await Promise.all([
+  mkdir(outputStylesDirectory, { recursive: true }),
+  mkdir(outputScriptsDirectory, { recursive: true }),
+]);
 await cp(sourcePublicDirectory, outputPublicDirectory, {
   recursive: true,
   filter: (source) =>
-    ![sourceStylesheet, sourceFavicon].some(
+    ![sourceStylesheet, sourceFavicon, sourceScript].some(
       (excludedSource) => path.resolve(source) === path.resolve(excludedSource),
     ),
 });
@@ -45,12 +60,14 @@ await writeFile(
   minifiedCss,
 );
 await writeFile(path.join(outputPublicDirectory, generatedFavicon), favicon);
+await writeFile(path.join(outputPublicDirectory, generatedScript), script);
 await writeFile(
   path.join(outputDirectory, 'asset-manifest.json'),
   `${JSON.stringify(
     {
       'favicon.svg': generatedFavicon,
       'styles/main.css': generatedStylesheet,
+      'scripts/record-actions.js': generatedScript,
     },
     null,
     2,

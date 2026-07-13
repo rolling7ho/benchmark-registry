@@ -52,8 +52,8 @@ BR  = Benchmark Record
   </section>
 
   <section id="comparability"><h2>Comparing Benchmark Records</h2>
-    <p>The home page can order reported records by their stored numeric score. This ordering is not a normalized model ranking: scores from different benchmarks or metrics may use different scales and meanings.</p>
-    <p>Benchmark Registry does not assume that records sharing a benchmark name are directly comparable. Benchmark variant, evaluation configuration, model snapshot, and evaluator may affect a reported result. Use the benchmark and metric filters to narrow the table, then review each record's evaluation context before drawing comparisons.</p>
+    <p>The home page can sort reported records by record number, model, benchmark, metric, stored numeric score, evaluation date, or Model Identifier. Score ordering is not a normalized model ranking: scores from different benchmarks or metrics may use different scales and meanings.</p>
+    <p>Benchmark Registry does not assume that records sharing a benchmark name are directly comparable. Benchmark variant, evaluation configuration, model snapshot, and evaluator may affect a reported result. Use the model, benchmark, and metric filters to narrow the table, then review each record's evaluation context before drawing comparisons.</p>
     <p>Any structural compatibility assessment is conservative data-integrity support. It is not a scientific or statistical conclusion and does not rank models.</p>
   </section>
 
@@ -76,6 +76,7 @@ BR  = Benchmark Record
   </section>
 
   <section id="contact-us"><h2>Contact Us</h2>
+    <p>To report a correction, include the stable Benchmark Record Identifier and a supporting source link.</p>
     <p>X: <a href="https://x.com/rolling7ho">@rolling7ho</a></p>
   </section>
 </article>

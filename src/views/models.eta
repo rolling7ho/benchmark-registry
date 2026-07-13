@@ -3,5 +3,5 @@
 <p class="table-scroll-notice">Table may be scrolled horizontally on narrow displays.</p>
 <div class="table-scroll" tabindex="0" aria-label="Models table"><table class="browse-table"><thead><tr><th>Model</th><th>Model ID</th><th>Organization</th><th>Family</th><th>Model No.</th><th>Tier</th><th>Status</th></tr></thead><tbody>
 <% if (it.models.length === 0) { %><tr><td colspan="7" class="empty-state">No models are currently available.</td></tr><% } %>
-<% it.models.forEach(function(model) { %><tr><td><a href="/models/<%= encodeURIComponent(model.modelId) %>"><%= model.officialName %></a></td><td><a href="/models/<%= encodeURIComponent(model.modelId) %>"><code><%= model.modelId %></code></a></td><td><%= model.organizationName %></td><td><%= model.family ?? 'Unknown' %></td><td><%= model.modelNumber ?? 'Unknown' %></td><td><%= model.tierCode ?? '—' %></td><td><%= model.status %></td></tr><% }) %>
+<% it.models.forEach(function(model) { %><tr><td><a href="/models/<%= encodeURIComponent(model.slug) %>"><%= model.officialName %></a></td><td><a href="/models/<%= encodeURIComponent(model.slug) %>"><code><%= model.modelId %></code></a></td><td><%= model.organizationName %></td><td><%= model.family ?? 'Unknown' %></td><td><%= model.modelNumber ?? 'Unknown' %></td><td><%= model.tierCode ?? '—' %></td><td><%= model.status %></td></tr><% }) %>
 </tbody></table></div>

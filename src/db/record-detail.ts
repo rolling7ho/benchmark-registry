@@ -86,6 +86,7 @@ export async function getPublicRecordDetail(db: Database, identifier: string) {
       'model_snapshots.provider_model_identifier as providerModelIdentifier',
       'model_snapshots.snapshot_date as snapshotDate',
       'benchmarks.name as benchmarkFamily',
+      'benchmarks.slug as benchmarkSlug',
       'benchmarks.organization_name as benchmarkOrganization',
       'benchmark_versions.version_label as benchmarkVersionLabel',
       'benchmark_versions.variant_name as benchmarkVariantName',

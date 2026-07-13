@@ -23,17 +23,27 @@ describe('public application routes without a database', () => {
     expect(response.body).not.toContain('Benchmark Records Leaderboard');
     expect(response.body).toContain('name="benchmark"');
     expect(response.body).toContain('name="metric"');
+    expect(response.body).toContain('name="model"');
+    expect(response.body).toContain('name="sort"');
     expect(response.body).toContain('name="order"');
-    expect(response.body).toContain('Highest to lowest');
+    expect(response.body).toContain('Descending');
     expect(response.body).toContain('not necessarily comparable');
     expect(response.body).toContain('<th>Rank</th>');
-    expect(response.body.indexOf('Source</th>')).toBeLessThan(
-      response.body.indexOf('Model ID</th>'),
+    expect(response.body.indexOf('<th>Source</th>')).toBeLessThan(
+      response.body.indexOf('sort=model-id'),
     );
     expect(response.body).toContain('Last database update: Not available');
     expect(response.body).toContain(
       '<meta name="viewport" content="width=device-width, initial-scale=1">',
     );
+    expect(response.body).toContain(
+      '<link rel="canonical" href="https://benchmarkregistry.org/">',
+    );
+    expect(response.body).toContain(
+      '<meta name="robots" content="index,follow">',
+    );
+    expect(response.body).toContain('application/ld+json');
+    expect(response.body).toContain('https://schema.org');
     expect(response.body).toContain('href="/public/styles/main.css"');
     expect(response.body).toContain(
       'rel="icon" href="/public/favicon.svg" type="image/svg+xml"',
@@ -69,6 +79,30 @@ describe('public application routes without a database', () => {
     expect(response.headers['cache-control']).toContain('max-age=0');
     expect(response.headers['cache-control']).not.toContain('immutable');
     expect(response.body).toContain('@media (max-width: 640px)');
+  });
+
+  it('serves the progressive record action script', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/public/scripts/record-actions.js',
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['cache-control']).toContain('max-age=0');
+    expect(response.body).toContain('navigator.clipboard.writeText');
+    expect(response.body).toContain('navigator.share');
+  });
+
+  it('keeps filter state in sortable column links', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/?model=opnai-55&benchmark=deepswe&metric=overall&sort=model&order=asc',
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain(
+      '/?model=opnai-55&amp;benchmark=deepswe&amp;metric=overall&amp;sort=model&amp;order=desc',
+    );
+    expect(response.body).toContain('No records match the selected filters.');
+    expect(response.body).toContain('Clear all filters');
   });
 
   it.each(['/models', '/benchmarks', '/organizations', '/recent', '/sources'])(
@@ -119,7 +153,10 @@ describe('public application routes without a database', () => {
   it('sets restrictive centralized security headers', async () => {
     const response = await app.inject({ method: 'GET', url: '/' });
     expect(response.headers['content-security-policy']).toContain(
-      "script-src 'none'",
+      "script-src 'self'",
+    );
+    expect(response.headers['content-security-policy']).toContain(
+      "script-src-attr 'none'",
     );
     expect(response.headers['content-security-policy']).toContain(
       "frame-ancestors 'none'",
@@ -154,5 +191,47 @@ describe('public application routes without a database', () => {
     const response = await app.inject({ method: 'GET', url: '/health' });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ status: 'ok' });
+  });
+
+  it('publishes crawl rules and production-only sitemap URLs', async () => {
+    const robots = await app.inject({ method: 'GET', url: '/robots.txt' });
+    expect(robots.statusCode).toBe(200);
+    expect(robots.body).toContain('Allow: /');
+    expect(robots.body).toContain('Disallow: /admin');
+    expect(robots.body).toContain(
+      'Sitemap: https://benchmarkregistry.org/sitemap.xml',
+    );
+
+    const index = await app.inject({ method: 'GET', url: '/sitemap.xml' });
+    expect(index.statusCode).toBe(200);
+    expect(index.headers['content-type']).toContain('application/xml');
+    expect(index.body).toContain(
+      'https://benchmarkregistry.org/sitemaps/models.xml',
+    );
+    expect(index.body).not.toMatch(
+      /localhost|vercel\.app|supabase|staging|preview/i,
+    );
+
+    const pages = await app.inject({
+      method: 'GET',
+      url: '/sitemaps/pages.xml',
+    });
+    expect(pages.body).toContain(
+      '<loc>https://benchmarkregistry.org/models</loc>',
+    );
+  });
+
+  it('marks search results noindex while leaving links followable', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/search?q=registry',
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain(
+      '<meta name="robots" content="noindex,follow">',
+    );
+    expect(response.body).toContain(
+      '<link rel="canonical" href="https://benchmarkregistry.org/search">',
+    );
   });
 });

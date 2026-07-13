@@ -1,8 +1,10 @@
 import type { RegistryStatus } from './constants.js';
 import type { Database } from './database.js';
+import { modelSlug } from '../web/seo.js';
 
 export interface PublicModel {
   id: string;
+  slug: string;
   modelId: string;
   officialName: string;
   organizationName: string;
@@ -132,13 +134,14 @@ export async function listModels(db: Database): Promise<PublicModel[]> {
     .execute();
   return rows.map((row) => ({
     ...row,
+    slug: modelSlug(row.modelId),
     releaseDate: isoDate(row.releaseDate),
   }));
 }
 
-export async function getModelByIdentifier(
+export async function getModelBySlug(
   db: Database,
-  modelId: string,
+  slug: string,
 ): Promise<PublicModel | undefined> {
   const row = await db
     .selectFrom('models')
@@ -154,11 +157,15 @@ export async function getModelByIdentifier(
       'models.status as status',
       'models.release_date as releaseDate',
     ])
-    .where('models.model_id', '=', modelId.toUpperCase())
+    .where('models.model_id', '=', slug.toUpperCase())
     .executeTakeFirst();
   return row === undefined
     ? undefined
-    : { ...row, releaseDate: isoDate(row.releaseDate) };
+    : {
+        ...row,
+        slug: modelSlug(row.modelId),
+        releaseDate: isoDate(row.releaseDate),
+      };
 }
 
 export async function listBenchmarks(db: Database): Promise<PublicBenchmark[]> {

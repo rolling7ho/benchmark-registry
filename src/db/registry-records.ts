@@ -10,13 +10,16 @@ import type { RegistryStatus } from './constants.js';
 import type { Database } from './database.js';
 import type { DatabaseSchema } from './types.js';
 import { formatBenchmarkDisplay } from '../registry/benchmark-display.js';
+import { modelSlug } from '../web/seo.js';
 
 export const REGISTRY_PAGE_SIZE = 100;
 
 export interface PublicRegistryRecord {
   recordId: string;
   modelId: string;
+  modelSlug: string;
   modelName: string;
+  benchmarkSlug: string;
   benchmarkName: string;
   metricName: string;
   scoreDisplay: string;
@@ -33,6 +36,14 @@ export interface RegistryRecordPage {
 }
 
 export type LeaderboardOrder = 'asc' | 'desc';
+export type RegistrySort =
+  | 'record'
+  | 'model'
+  | 'benchmark'
+  | 'metric'
+  | 'score'
+  | 'evaluation-date'
+  | 'model-id';
 
 export interface LeaderboardOption {
   value: string;
@@ -40,6 +51,7 @@ export interface LeaderboardOption {
 }
 
 export interface LeaderboardOptions {
+  models: LeaderboardOption[];
   benchmarks: LeaderboardOption[];
   metrics: LeaderboardOption[];
 }
@@ -48,8 +60,10 @@ export type RegistryRecordFilter =
   | { kind: 'RECENT' }
   | {
       kind: 'LEADERBOARD';
+      modelSlug: string | null;
       benchmarkSlug: string | null;
       metricSlug: string | null;
+      sort: RegistrySort;
       order: LeaderboardOrder;
     }
   | { kind: 'EXACT_RECORD'; recordId: string }
@@ -154,6 +168,11 @@ function applyFilter(
           filter.benchmarkSlug,
         );
       }
+      if (filter.modelSlug !== null) {
+        leaderboardQuery = leaderboardQuery.where(
+          sql<boolean>`lower(models.model_id) = ${filter.modelSlug}`,
+        );
+      }
       if (filter.metricSlug !== null) {
         leaderboardQuery = leaderboardQuery.where(
           'metrics.slug',
@@ -255,6 +274,7 @@ export async function getRegistryRecords(
       'benchmark_records.record_id as recordId',
       'models.model_id as modelId',
       'models.official_name as modelName',
+      'benchmarks.slug as benchmarkSlug',
       'benchmarks.name as benchmarkName',
       'benchmark_versions.version_label as benchmarkVersionLabel',
       'benchmark_versions.variant_name as benchmarkVariantName',
@@ -270,11 +290,40 @@ export async function getRegistryRecords(
       .orderBy('benchmark_records.created_at', 'desc')
       .orderBy('benchmark_records.record_id', 'asc');
   } else if (filter.kind === 'LEADERBOARD') {
-    resultQuery = resultQuery
-      .orderBy(
-        sql`benchmark_records.score_value ${sql.raw(filter.order)} nulls last`,
-      )
-      .orderBy('benchmark_records.record_id', 'asc');
+    switch (filter.sort) {
+      case 'record':
+        resultQuery = resultQuery.orderBy(
+          'benchmark_records.record_id',
+          filter.order,
+        );
+        break;
+      case 'model':
+        resultQuery = resultQuery.orderBy('models.official_name', filter.order);
+        break;
+      case 'benchmark':
+        resultQuery = resultQuery
+          .orderBy('benchmarks.name', filter.order)
+          .orderBy('benchmark_versions.version_label', filter.order)
+          .orderBy('benchmark_versions.variant_name', filter.order);
+        break;
+      case 'metric':
+        resultQuery = resultQuery.orderBy('metrics.name', filter.order);
+        break;
+      case 'score':
+        resultQuery = resultQuery.orderBy(
+          sql`benchmark_records.score_value ${sql.raw(filter.order)} nulls last`,
+        );
+        break;
+      case 'evaluation-date':
+        resultQuery = resultQuery.orderBy(
+          sql`benchmark_records.evaluation_date ${sql.raw(filter.order)} nulls last`,
+        );
+        break;
+      case 'model-id':
+        resultQuery = resultQuery.orderBy('models.model_id', filter.order);
+        break;
+    }
+    resultQuery = resultQuery.orderBy('benchmark_records.record_id', 'asc');
   } else {
     resultQuery = resultQuery
       .orderBy(sql`benchmark_records.evaluation_date desc nulls last`)
@@ -286,6 +335,7 @@ export async function getRegistryRecords(
   return {
     records: rows.map((row) => ({
       ...row,
+      modelSlug: modelSlug(row.modelId),
       benchmarkName: formatBenchmarkDisplay({
         familyName: row.benchmarkName,
         versionLabel: row.benchmarkVersionLabel,
@@ -303,7 +353,18 @@ export async function getRegistryRecords(
 export async function getLeaderboardOptions(
   db: Database,
 ): Promise<LeaderboardOptions> {
-  const [benchmarks, metrics] = await Promise.all([
+  const [models, benchmarks, metrics] = await Promise.all([
+    db
+      .selectFrom('benchmark_records')
+      .innerJoin('models', 'models.id', 'benchmark_records.model_id')
+      .select(['models.model_id as value', 'models.official_name as label'])
+      .distinct()
+      .where('benchmark_records.status', '=', 'ACTIVE')
+      .orderBy('models.official_name', 'asc')
+      .execute()
+      .then((rows) =>
+        rows.map((row) => ({ ...row, value: modelSlug(row.value) })),
+      ),
     db
       .selectFrom('benchmark_records')
       .innerJoin(
@@ -325,5 +386,5 @@ export async function getLeaderboardOptions(
       .orderBy('metrics.name', 'asc')
       .execute(),
   ]);
-  return { benchmarks, metrics };
+  return { models, benchmarks, metrics };
 }

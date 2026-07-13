@@ -13,7 +13,7 @@ export function registerSecurityHeaders(app: FastifyInstance): void {
         frameAncestors: ["'none'"],
         imgSrc: ["'self'"],
         objectSrc: ["'none'"],
-        scriptSrc: ["'none'"],
+        scriptSrc: ["'self'"],
         styleSrc: ["'self'"],
         upgradeInsecureRequests: null,
       },

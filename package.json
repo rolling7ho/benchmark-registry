@@ -14,6 +14,7 @@
     "build:server": "tsc -p tsconfig.build.json",
     "build:assets": "node scripts/build-assets.mjs",
     "verify:assets": "node scripts/verify-assets.mjs",
+    "seo:audit": "tsx scripts/seo-audit.ts",
     "build": "pnpm clean && pnpm build:server && pnpm build:assets && pnpm verify:assets",
     "start": "node dist/server.js",
     "test": "vitest run",

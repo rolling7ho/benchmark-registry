@@ -3,9 +3,23 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><%= it.title %></title>
-    <link rel="icon" href="<%= it.assetPath('favicon.svg') %>" type="image/svg+xml">
+    <title><%= it.seo.title %></title>
+    <meta name="description" content="<%= it.seo.description %>">
+    <meta name="robots" content="<%= it.seo.robots %>">
+    <meta name="application-name" content="Benchmark Registry">
+    <% if (it.seo.canonicalUrl !== null) { %><link rel="canonical" href="<%= it.seo.canonicalUrl %>"><% } %>
+    <meta property="og:type" content="<%= it.seo.openGraphType %>">
+    <meta property="og:site_name" content="Benchmark Registry">
+    <meta property="og:title" content="<%= it.seo.title %>">
+    <meta property="og:description" content="<%= it.seo.description %>">
+    <% if (it.seo.canonicalUrl !== null) { %><meta property="og:url" content="<%= it.seo.canonicalUrl %>"><% } %>
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="<%= it.seo.title %>">
+    <meta name="twitter:description" content="<%= it.seo.description %>">
+    <link rel="icon" href="<%= it.assetPath('favicon.svg') %>" type="image/svg+xml" sizes="any">
+    <% if (it.seo.jsonLd !== null) { %><script type="application/ld+json"><%~ it.seo.jsonLd %></script><% } %>
     <link rel="stylesheet" href="<%= it.assetPath('styles/main.css') %>">
+    <script src="<%= it.assetPath('scripts/record-actions.js') %>" defer></script>
   </head>
   <body>
     <div class="institutional-bar"></div>

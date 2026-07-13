@@ -6,6 +6,15 @@
 <% if (it.leaderboard) { %>
   <form class="leaderboard-filters" method="get" action="/">
     <div class="filter-field">
+      <label for="model-filter">Model</label>
+      <select id="model-filter" name="model">
+        <option value="">All models</option>
+        <% it.leaderboard.models.forEach(function(model) { %>
+          <option value="<%= model.value %>"<% if (model.value === it.leaderboard.selectedModel) { %> selected<% } %>><%= model.label %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="filter-field">
       <label for="benchmark-filter">Benchmark</label>
       <select id="benchmark-filter" name="benchmark">
         <option value="">All benchmarks</option>
@@ -24,10 +33,22 @@
       </select>
     </div>
     <div class="filter-field">
-      <label for="order-filter">Score order</label>
+      <label for="sort-filter">Sort by</label>
+      <select id="sort-filter" name="sort">
+        <option value="score"<% if (it.leaderboard.sort === 'score') { %> selected<% } %>>Score</option>
+        <option value="evaluation-date"<% if (it.leaderboard.sort === 'evaluation-date') { %> selected<% } %>>Evaluation date</option>
+        <option value="record"<% if (it.leaderboard.sort === 'record') { %> selected<% } %>>Record number</option>
+        <option value="model"<% if (it.leaderboard.sort === 'model') { %> selected<% } %>>Model name</option>
+        <option value="benchmark"<% if (it.leaderboard.sort === 'benchmark') { %> selected<% } %>>Benchmark</option>
+        <option value="metric"<% if (it.leaderboard.sort === 'metric') { %> selected<% } %>>Metric</option>
+        <option value="model-id"<% if (it.leaderboard.sort === 'model-id') { %> selected<% } %>>Model ID</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="order-filter">Direction</label>
       <select id="order-filter" name="order">
-        <option value="desc"<% if (it.leaderboard.order === 'desc') { %> selected<% } %>>Highest to lowest</option>
-        <option value="asc"<% if (it.leaderboard.order === 'asc') { %> selected<% } %>>Lowest to highest</option>
+        <option value="desc"<% if (it.leaderboard.order === 'desc') { %> selected<% } %>>Descending</option>
+        <option value="asc"<% if (it.leaderboard.order === 'asc') { %> selected<% } %>>Ascending</option>
       </select>
     </div>
     <button type="submit">Apply filters</button>
@@ -35,5 +56,5 @@
   <p class="leaderboard-notice">Scores from different benchmarks, metrics, versions, or evaluation configurations are not necessarily comparable. Use the filters to narrow the records before drawing comparisons.</p>
 <% } %>
 <% if (it.statusNotice !== null) { %><p class="status-notice"><%= it.statusNotice %></p><% } %>
-<%~ include('partials/registry-table.eta', { records: it.records, emptyMessage: it.emptyMessage, rankOffset: it.leaderboard?.rankOffset }) %>
+<%~ include('partials/registry-table.eta', { records: it.records, emptyMessage: it.emptyMessage, emptyDescription: it.emptyDescription, emptyAction: it.emptyAction, rankOffset: it.leaderboard?.rankOffset, sort: it.leaderboard?.sort, order: it.leaderboard?.order, sortUrls: it.leaderboard?.sortUrls }) %>
 <% if (it.pagination !== null) { %><%~ include('partials/pagination.eta', it.pagination) %><% } %>

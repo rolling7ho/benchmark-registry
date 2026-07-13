@@ -104,6 +104,8 @@ Source-assisted ingestion rules:
 
 Production and mobile rules:
 
+- This is a real production project with a live Vercel deployment, not a prototype or local-only application.
+- The canonical public custom domain is https://www.benchmarkregistry.org/.
 - Production CSS must be minified through the build pipeline.
 - Do not manually edit generated production assets.
 - Static asset caching requires reliable cache busting.

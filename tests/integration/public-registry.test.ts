@@ -128,6 +128,14 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
         method: 'GET',
         url: '/?benchmark=deepswe&metric=overall&order=desc',
       });
+      const modelFiltered = await app.inject({
+        method: 'GET',
+        url: '/?model=opnai-55',
+      });
+      const recordAscending = await app.inject({
+        method: 'GET',
+        url: '/?sort=record&order=asc',
+      });
       const exact = await app.inject({
         method: 'GET',
         url: '/search?q=BR-00155-001',
@@ -159,6 +167,13 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
       expect(filtered.body).toContain(
         '<option value="deepswe" selected>DeepSWE</option>',
       );
+      expect(modelFiltered.body).toContain(
+        '<option value="opnai-55" selected>GPT-5.5</option>',
+      );
+      expect(modelFiltered.body).not.toContain('88.1%');
+      expect(recordAscending.body.indexOf('BR-00155-001')).toBeLessThan(
+        recordAscending.body.indexOf('BR-00155-002'),
+      );
       expect(exact.statusCode).toBe(200);
       expect(
         exact.body.match(/<code class="identifier">BR-00155-001<\/code>/g)
@@ -171,6 +186,11 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
       expect(detail.body).toContain('BENCHMARK RECORD:');
       expect(detail.body).toContain('Evaluation Context');
       expect(detail.body).toContain('Provenance');
+      expect(detail.body).toContain('Copy record ID');
+      expect(detail.body).toContain('Copy canonical URL');
+      expect(detail.body).toContain('Share record');
+      expect(detail.body).toContain('Report a correction');
+      expect(detail.body).toContain('class="source-link"');
       expect(detail.body).toContain('not necessarily directly comparable');
       expect(
         (await app.inject({ method: 'GET', url: '/records/UNKNOWN' }))

@@ -10,6 +10,7 @@ const manifest = JSON.parse(
 );
 const generatedPath = manifest['styles/main.css'];
 const generatedFaviconPath = manifest['favicon.svg'];
+const generatedScriptPath = manifest['scripts/record-actions.js'];
 
 if (
   typeof generatedPath !== 'string' ||
@@ -17,6 +18,14 @@ if (
 ) {
   throw new Error(
     'The asset manifest does not contain a hashed main stylesheet.',
+  );
+}
+if (
+  typeof generatedScriptPath !== 'string' ||
+  !/^scripts\/record-actions\.[a-f0-9]{12}\.js$/.test(generatedScriptPath)
+) {
+  throw new Error(
+    'The asset manifest does not contain a hashed record action script.',
   );
 }
 if (
@@ -34,6 +43,7 @@ const generatedFaviconFile = path.join(
 );
 await access(generatedFile);
 await access(generatedFaviconFile);
+await access(path.join(outputDirectory, 'public', generatedScriptPath));
 await access(path.join(outputDirectory, 'views', 'layout.eta'));
 
 const [sourceSize, generatedSize] = await Promise.all([

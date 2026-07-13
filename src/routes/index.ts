@@ -3,7 +3,7 @@ import type { FastifyPluginCallback, FastifyReply } from 'fastify';
 import {
   getBenchmarkBySlug,
   getBenchmarkVersionByReference,
-  getModelByIdentifier,
+  getModelBySlug,
   getOrganizationBySlug,
   listBenchmarks,
   listModels,
@@ -18,11 +18,25 @@ import {
   getRegistryRecords,
   REGISTRY_PAGE_SIZE,
   type LeaderboardOrder,
+  type RegistrySort,
   type RegistryRecordFilter,
   type RegistryRecordPage,
 } from '../db/registry-records.js';
+import {
+  countRecordSitemapBatches,
+  listBenchmarkSitemapEntries,
+  listModelSitemapEntries,
+  listRecordSitemapEntries,
+} from '../db/sitemaps.js';
 import { PROVIDER_DOCUMENTATION } from '../identifiers/provider-documentation.js';
 import { resolveSearch } from '../search/resolve-search.js';
+import {
+  CANONICAL_ORIGIN,
+  canonicalPagePath,
+  createPageSeo,
+  modelSlug,
+} from '../web/seo.js';
+import { renderSitemapIndex, renderUrlSet } from '../web/sitemap-xml.js';
 
 interface RouteOptions {
   database: Database | undefined;
@@ -33,8 +47,10 @@ interface PageQuery {
 }
 
 interface LeaderboardQuery extends PageQuery {
+  model?: string;
   benchmark?: string;
   metric?: string;
+  sort?: string;
   order?: string;
 }
 
@@ -61,6 +77,53 @@ function parsePage(value: string | undefined): number {
   if (value === undefined || !/^\d+$/.test(value)) return 1;
   const page = Number(value);
   return Number.isSafeInteger(page) && page > 0 ? page : 1;
+}
+
+const REGISTRY_SORTS = new Set<RegistrySort>([
+  'record',
+  'model',
+  'benchmark',
+  'metric',
+  'score',
+  'evaluation-date',
+  'model-id',
+]);
+
+function parseRegistrySort(value: string | undefined): RegistrySort {
+  return REGISTRY_SORTS.has(value as RegistrySort)
+    ? (value as RegistrySort)
+    : 'score';
+}
+
+function registrySortUrls(
+  selected: { model: string; benchmark: string; metric: string },
+  currentSort: RegistrySort,
+  currentOrder: LeaderboardOrder,
+): Record<RegistrySort, string> {
+  const result = {} as Record<RegistrySort, string>;
+  for (const sort of REGISTRY_SORTS) {
+    const parameters = new URLSearchParams();
+    for (const [key, value] of Object.entries(selected)) {
+      if (value !== '') parameters.set(key, value);
+    }
+    parameters.set('sort', sort);
+    const defaultOrder: LeaderboardOrder = [
+      'score',
+      'evaluation-date',
+    ].includes(sort)
+      ? 'desc'
+      : 'asc';
+    parameters.set(
+      'order',
+      sort === currentSort
+        ? currentOrder === 'asc'
+          ? 'desc'
+          : 'asc'
+        : defaultOrder,
+    );
+    result[sort] = `/?${parameters.toString()}`;
+  }
+  return result;
 }
 
 function formatDatabaseUpdate(value: string | null): string {
@@ -135,6 +198,11 @@ function renderError(
 ): FastifyReply {
   return reply.status(statusCode).view('error.eta', {
     title: `${statusCode} — Benchmark Registry`,
+    seo: createPageSeo({
+      title: `${statusCode} — Benchmark Registry`,
+      description: message,
+      index: false,
+    }),
     statusCode,
     message,
     query: '',
@@ -160,41 +228,88 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
 
   app.get<{ Querystring: LeaderboardQuery }>('/', async (request, reply) => {
     const page = parsePage(request.query.page);
+    const selectedModelSlug = request.query.model?.trim().toLowerCase() || null;
     const benchmarkSlug = request.query.benchmark?.trim().toLowerCase() || null;
     const metricSlug = request.query.metric?.trim().toLowerCase() || null;
+    const sort = parseRegistrySort(request.query.sort);
     const order: LeaderboardOrder =
       request.query.order === 'asc' ? 'asc' : 'desc';
     const [result, update, options] = await Promise.all([
       registryPage(
         database,
-        { kind: 'LEADERBOARD', benchmarkSlug, metricSlug, order },
+        {
+          kind: 'LEADERBOARD',
+          modelSlug: selectedModelSlug,
+          benchmarkSlug,
+          metricSlug,
+          sort,
+          order,
+        },
         page,
       ),
       database === undefined
         ? Promise.resolve(null)
         : getLastDatabaseUpdate(database),
       database === undefined
-        ? Promise.resolve({ benchmarks: [], metrics: [] })
+        ? Promise.resolve({ models: [], benchmarks: [], metrics: [] })
         : getLeaderboardOptions(database),
     ]);
     return reply.view('registry-page.eta', {
       title: 'Benchmark Registry',
+      seo: createPageSeo({
+        title: 'Benchmark Registry',
+        description:
+          'Public registry of reported artificial intelligence benchmark evaluations, scores, sources, model identifiers, and evaluation context.',
+        path: '/',
+        includeSiteIdentity: true,
+      }),
       query: '',
-      heading: null,
+      heading: 'Benchmark Records',
       databaseUpdate: formatDatabaseUpdate(update),
       records: result.records,
-      emptyMessage: 'No benchmark records are currently available.',
+      emptyMessage:
+        selectedModelSlug !== null ||
+        benchmarkSlug !== null ||
+        metricSlug !== null
+          ? 'No records match the selected filters.'
+          : 'No benchmark records are currently available.',
+      emptyDescription:
+        selectedModelSlug !== null ||
+        benchmarkSlug !== null ||
+        metricSlug !== null
+          ? 'Clear the filters to return to the complete registry.'
+          : 'Records will appear here after they have been published.',
+      emptyAction:
+        selectedModelSlug !== null ||
+        benchmarkSlug !== null ||
+        metricSlug !== null
+          ? { url: '/', label: 'Clear all filters' }
+          : null,
       statusNotice: null,
       leaderboard: {
         ...options,
+        selectedModel: selectedModelSlug ?? '',
         selectedBenchmark: benchmarkSlug ?? '',
         selectedMetric: metricSlug ?? '',
+        sort,
         order,
-        rankOffset: (result.page - 1) * result.pageSize,
+        rankOffset:
+          sort === 'score' ? (result.page - 1) * result.pageSize : undefined,
+        sortUrls: registrySortUrls(
+          {
+            model: selectedModelSlug ?? '',
+            benchmark: benchmarkSlug ?? '',
+            metric: metricSlug ?? '',
+          },
+          sort,
+          order,
+        ),
       },
       pagination: pagination(result, '/', undefined, {
+        model: selectedModelSlug ?? '',
         benchmark: benchmarkSlug ?? '',
         metric: metricSlug ?? '',
+        sort,
         order,
       }),
     });
@@ -214,11 +329,21 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
       const displayQuery = rawQuery.trim();
       return reply.view('registry-page.eta', {
         title: 'Search — Benchmark Registry',
+        seo: createPageSeo({
+          title: 'Search — Benchmark Registry',
+          description:
+            'Search Benchmark Registry by exact record identifier, model identifier, model name, benchmark, organization, or metric.',
+          path: '/search',
+          index: false,
+        }),
         query: displayQuery,
         heading: `Search results for “${displayQuery}”`,
         databaseUpdate: null,
         records: [],
         emptyMessage: `No records found for “${displayQuery}”.`,
+        emptyDescription:
+          'Check the identifier or try a broader model, benchmark, or metric search.',
+        emptyAction: { url: '/', label: 'Browse all records' },
         statusNotice: null,
         pagination: pagination(
           { ...EMPTY_PAGE, page },
@@ -274,11 +399,20 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         : null;
     return reply.view('registry-page.eta', {
       title: 'Search — Benchmark Registry',
+      seo: createPageSeo({
+        title: `Search results for “${resolution.displayQuery}” | Benchmark Registry`,
+        description: `Benchmark Registry search results for “${resolution.displayQuery}”.`,
+        path: '/search',
+        index: false,
+      }),
       query: resolution.displayQuery,
       heading: `Search results for “${resolution.displayQuery}”`,
       databaseUpdate: null,
       records: result.records,
       emptyMessage: `No records found for “${resolution.displayQuery}”.`,
+      emptyDescription:
+        'Check the identifier or try a broader model, benchmark, or metric search.',
+      emptyAction: { url: '/', label: 'Browse all records' },
       statusNotice,
       pagination:
         resolution.kind === 'EXACT_RECORD'
@@ -290,6 +424,12 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
   app.get('/models', async (_request, reply) =>
     reply.view('models.eta', {
       title: 'Models — Benchmark Registry',
+      seo: createPageSeo({
+        title: 'AI Models | Benchmark Registry',
+        description:
+          'Browse canonical AI models with stable Model Identifiers and links to their reported benchmark records.',
+        path: '/models',
+      }),
       query: '',
       models: database === undefined ? [] : await listModels(database),
     }),
@@ -306,6 +446,12 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
       );
       if (record === undefined)
         return renderError(reply, 404, 'Record or page not found');
+      if (request.params.recordId !== record.recordId) {
+        return reply
+          .code(308)
+          .header('Location', `/records/${encodeURIComponent(record.recordId)}`)
+          .send();
+      }
       const eventLabels: Record<string, string> = {
         CREATED_MANUALLY: 'Record created manually',
         CREATED_FROM_INGESTION:
@@ -319,9 +465,17 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
       };
       return reply.view('record.eta', {
         title: `${record.recordId} — Benchmark Registry`,
+        seo: createPageSeo({
+          title: `${record.modelName} on ${record.benchmarkDisplay}: ${record.scoreDisplay} ${record.metricName} | Benchmark Registry`,
+          description: `Reported ${record.metricName} result of ${record.scoreDisplay} for ${record.modelName} on ${record.benchmarkDisplay}. Benchmark Registry record ${record.recordId}.`,
+          path: `/records/${encodeURIComponent(record.recordId)}`,
+        }),
         query: '',
         record: {
           ...record,
+          canonicalUrl: `${CANONICAL_ORIGIN}/records/${encodeURIComponent(record.recordId)}`,
+          correctionUrl: '/docs#contact-us',
+          modelSlug: modelSlug(record.modelIdentifier),
           additionalConfigurationDisplay:
             Object.keys(record.additionalConfiguration).length === 0
               ? 'None reported'
@@ -335,17 +489,20 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
     },
   );
 
-  app.get<{ Params: { modelId: string }; Querystring: PageQuery }>(
-    '/models/:modelId',
+  app.get<{ Params: { slug: string }; Querystring: PageQuery }>(
+    '/models/:slug',
     async (request, reply) => {
       if (database === undefined)
         return renderError(reply, 404, 'Record or page not found');
-      const model = await getModelByIdentifier(
-        database,
-        request.params.modelId,
-      );
+      const model = await getModelBySlug(database, request.params.slug);
       if (model === undefined)
         return renderError(reply, 404, 'Record or page not found');
+      if (request.params.slug !== model.slug) {
+        return reply
+          .code(308)
+          .header('Location', `/models/${encodeURIComponent(model.slug)}`)
+          .send();
+      }
       const page = parsePage(request.query.page);
       const result = await getRegistryRecords(
         database,
@@ -354,6 +511,14 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
       );
       return reply.view('model.eta', {
         title: `${model.officialName} — Benchmark Registry`,
+        seo: createPageSeo({
+          title: `${model.officialName} Benchmark Results & Scores | Benchmark Registry`,
+          description: `${model.officialName} benchmark results and reported scores in Benchmark Registry. Model Identifier ${model.modelId}; ${result.total} associated benchmark records.`,
+          path: canonicalPagePath(
+            `/models/${encodeURIComponent(model.slug)}`,
+            result.page,
+          ),
+        }),
         query: '',
         model,
         records: result.records,
@@ -361,7 +526,7 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
           'No benchmark records are currently associated with this model.',
         pagination: pagination(
           result,
-          `/models/${encodeURIComponent(model.modelId)}`,
+          `/models/${encodeURIComponent(model.slug)}`,
         ),
       });
     },
@@ -370,6 +535,12 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
   app.get('/benchmarks', async (_request, reply) =>
     reply.view('benchmarks.eta', {
       title: 'Benchmarks — Benchmark Registry',
+      seo: createPageSeo({
+        title: 'AI Benchmarks | Benchmark Registry',
+        description:
+          'Browse canonical AI benchmarks, versions, variants, and their associated reported evaluation records.',
+        path: '/benchmarks',
+      }),
       query: '',
       benchmarks: database === undefined ? [] : await listBenchmarks(database),
     }),
@@ -383,6 +554,15 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
       const benchmark = await getBenchmarkBySlug(database, request.params.slug);
       if (benchmark === undefined)
         return renderError(reply, 404, 'Record or page not found');
+      if (request.params.slug !== benchmark.slug) {
+        return reply
+          .code(308)
+          .header(
+            'Location',
+            `/benchmarks/${encodeURIComponent(benchmark.slug)}`,
+          )
+          .send();
+      }
       const page = parsePage(request.query.page);
       const result = await getRegistryRecords(
         database,
@@ -391,6 +571,14 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
       );
       return reply.view('benchmark.eta', {
         title: `${benchmark.name} — Benchmark Registry`,
+        seo: createPageSeo({
+          title: `${benchmark.name} AI Benchmark Results | Benchmark Registry`,
+          description: `${benchmark.name} reported AI benchmark results in Benchmark Registry, with ${result.total} associated records across canonical models.`,
+          path: canonicalPagePath(
+            `/benchmarks/${encodeURIComponent(benchmark.slug)}`,
+            result.page,
+          ),
+        }),
         query: '',
         benchmark,
         records: result.records,
@@ -418,6 +606,17 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
     ]);
     if (benchmark === undefined || version === undefined)
       return renderError(reply, 404, 'Record or page not found');
+    const versionSegment = version.canonicalReference
+      .split('/')
+      .slice(1)
+      .join('/');
+    const canonicalPath = `/benchmarks/${encodeURIComponent(benchmark.slug)}/versions/${encodeURIComponent(versionSegment)}`;
+    if (
+      request.params.slug !== benchmark.slug ||
+      request.params.version !== versionSegment
+    ) {
+      return reply.code(308).header('Location', canonicalPath).send();
+    }
     const page = parsePage(request.query.page);
     const result = await getRegistryRecords(
       database,
@@ -426,6 +625,11 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
     );
     return reply.view('benchmark-version.eta', {
       title: `${benchmark.name} — Benchmark Registry`,
+      seo: createPageSeo({
+        title: `${benchmark.name}: ${version.variantName ?? version.versionLabel ?? 'Unspecified'} Results | Benchmark Registry`,
+        description: `Reported ${benchmark.name} results for the ${version.variantName ?? version.versionLabel ?? 'unspecified'} version or variant in Benchmark Registry.`,
+        path: canonicalPagePath(canonicalPath, result.page),
+      }),
       query: '',
       benchmark,
       version,
@@ -441,6 +645,12 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
   app.get('/organizations', async (_request, reply) =>
     reply.view('organizations.eta', {
       title: 'Organizations — Benchmark Registry',
+      seo: createPageSeo({
+        title: 'Organizations | Benchmark Registry',
+        description:
+          'Browse organizations represented in Benchmark Registry and their associated model benchmark records.',
+        path: '/organizations',
+      }),
       query: '',
       organizations:
         database === undefined ? [] : await listOrganizations(database),
@@ -458,6 +668,15 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
       );
       if (organization === undefined)
         return renderError(reply, 404, 'Record or page not found');
+      if (request.params.slug !== organization.slug) {
+        return reply
+          .code(308)
+          .header(
+            'Location',
+            `/organizations/${encodeURIComponent(organization.slug)}`,
+          )
+          .send();
+      }
       const page = parsePage(request.query.page);
       const result = await getRegistryRecords(
         database,
@@ -466,6 +685,14 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
       );
       return reply.view('organization.eta', {
         title: `${organization.name} — Benchmark Registry`,
+        seo: createPageSeo({
+          title: `${organization.name} Models and Benchmark Records | Benchmark Registry`,
+          description: `${organization.name} models and ${result.total} associated reported benchmark records in Benchmark Registry.`,
+          path: canonicalPagePath(
+            `/organizations/${encodeURIComponent(organization.slug)}`,
+            result.page,
+          ),
+        }),
         query: '',
         organization,
         records: result.records,
@@ -484,6 +711,12 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
     const result = await registryPage(database, { kind: 'RECENT' }, page);
     return reply.view('registry-page.eta', {
       title: 'Recent Records — Benchmark Registry',
+      seo: createPageSeo({
+        title: 'Recent Benchmark Records | Benchmark Registry',
+        description:
+          'Recently added reported AI benchmark evaluation records with model, benchmark, metric, score, date, and source.',
+        path: canonicalPagePath('/recent', result.page),
+      }),
       query: '',
       heading: 'Recent Records',
       databaseUpdate: null,
@@ -497,6 +730,12 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
   app.get('/sources', async (_request, reply) =>
     reply.view('sources.eta', {
       title: 'Sources — Benchmark Registry',
+      seo: createPageSeo({
+        title: 'Sources | Benchmark Registry',
+        description:
+          'Primary, supporting, correction, and archive sources referenced by public Benchmark Registry records.',
+        path: '/sources',
+      }),
       query: '',
       sources: database === undefined ? [] : await listSources(database),
     }),
@@ -505,9 +744,115 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
   app.get('/docs', (_request, reply) =>
     reply.view('docs.eta', {
       title: 'Registry Documentation — Benchmark Registry',
+      seo: createPageSeo({
+        title: 'Registry Documentation | Benchmark Registry',
+        description:
+          'Documentation for Benchmark Registry identifiers, search behavior, evaluation context, sources, statuses, and comparability.',
+        path: '/docs',
+      }),
       query: '',
       providers: PROVIDER_DOCUMENTATION,
     }),
+  );
+
+  app.get('/robots.txt', (_request, reply) =>
+    reply
+      .type('text/plain; charset=utf-8')
+      .send(
+        [
+          'User-agent: *',
+          'Allow: /',
+          'Disallow: /admin',
+          'Disallow: /api',
+          'Disallow: /auth',
+          'Disallow: /health',
+          'Disallow: /internal',
+          'Disallow: /login',
+          'Disallow: /logout',
+          '',
+          `Sitemap: ${CANONICAL_ORIGIN}/sitemap.xml`,
+          '',
+        ].join('\n'),
+      ),
+  );
+
+  app.get('/sitemap.xml', async (_request, reply) => {
+    const recordBatchCount =
+      database === undefined ? 1 : await countRecordSitemapBatches(database);
+    const paths = [
+      '/sitemaps/pages.xml',
+      '/sitemaps/models.xml',
+      '/sitemaps/benchmarks.xml',
+      ...Array.from(
+        { length: recordBatchCount },
+        (_, index) => `/sitemaps/records-${index + 1}.xml`,
+      ),
+    ];
+    return reply
+      .type('application/xml; charset=utf-8')
+      .send(renderSitemapIndex(paths));
+  });
+
+  app.get('/sitemaps/pages.xml', (_request, reply) =>
+    reply
+      .type('application/xml; charset=utf-8')
+      .send(
+        renderUrlSet(
+          [
+            '/',
+            '/models',
+            '/benchmarks',
+            '/organizations',
+            '/recent',
+            '/sources',
+            '/docs',
+          ].map((path) => ({ path })),
+        ),
+      ),
+  );
+
+  app.get('/sitemaps/models.xml', async (_request, reply) =>
+    reply
+      .type('application/xml; charset=utf-8')
+      .send(
+        renderUrlSet(
+          database === undefined ? [] : await listModelSitemapEntries(database),
+        ),
+      ),
+  );
+
+  app.get('/sitemaps/benchmarks.xml', async (_request, reply) =>
+    reply
+      .type('application/xml; charset=utf-8')
+      .send(
+        renderUrlSet(
+          database === undefined
+            ? []
+            : await listBenchmarkSitemapEntries(database),
+        ),
+      ),
+  );
+
+  app.get<{ Params: { batch: string } }>(
+    '/sitemaps/records-:batch.xml',
+    async (request, reply) => {
+      if (!/^\d+$/.test(request.params.batch))
+        return reply.status(404).type('text/plain').send('Sitemap not found');
+      const batch = Number(request.params.batch);
+      const batchCount =
+        database === undefined ? 1 : await countRecordSitemapBatches(database);
+      if (!Number.isSafeInteger(batch) || batch < 1 || batch > batchCount)
+        return reply.status(404).type('text/plain').send('Sitemap not found');
+      return reply
+        .type('application/xml; charset=utf-8')
+        .send(
+          renderUrlSet(
+            database === undefined
+              ? []
+              : await listRecordSitemapEntries(database, batch),
+          ),
+        );
+    },
   );
 
   app.get('/health', () => ({ status: 'ok' }));

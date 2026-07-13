@@ -113,6 +113,29 @@ button {
 button:hover {
   background: #d6d6d6;
 }
+.compact-action {
+  margin-left: 3px;
+  padding: 1px 4px;
+  color: #333;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.record-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 8px;
+  margin: 5px 0;
+}
+.canonical-record-url {
+  margin: 5px 0 9px;
+  color: #444;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.canonical-record-url a {
+  overflow-wrap: anywhere;
+}
 .leaderboard-filters {
   display: flex;
   align-items: end;
@@ -194,6 +217,13 @@ th {
   font-weight: bold;
   white-space: nowrap;
 }
+.sort-link {
+  color: inherit;
+}
+.source-link {
+  font-weight: bold;
+  white-space: nowrap;
+}
 tbody tr:nth-child(even) {
   background: #f3f3f1;
 }
@@ -220,8 +250,17 @@ pre {
   font-weight: bold;
 }
 .empty-state {
-  padding: 8px 6px;
+  padding: 14px 10px;
   color: #444;
+  text-align: center;
+}
+.empty-state strong,
+.empty-state span {
+  display: block;
+}
+.empty-state span {
+  margin: 3px 0 7px;
+  font-weight: normal;
 }
 .pagination {
   display: flex;
