@@ -405,7 +405,10 @@ export async function getRegistryRecords(
     'benchmark_records.score_display as scoreDisplay',
     sql<number | null>`case
         when benchmark_records.score_value is null then null
-        else rank() over (order by benchmark_records.score_value desc nulls last)::integer
+        else row_number() over (
+          order by benchmark_records.score_value desc nulls last,
+                   benchmark_records.record_id asc
+        )::integer
       end`.as('rank'),
     'benchmark_records.evaluation_date as evaluationDate',
     'sources.url as sourceUrl',
