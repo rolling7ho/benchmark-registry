@@ -53,6 +53,7 @@ interface LeaderboardQuery extends PageQuery {
   metric?: string;
   sort?: string;
   order?: string;
+  'per-page'?: string;
 }
 
 interface SearchQuery extends PageQuery {
@@ -98,14 +99,43 @@ const REGISTRY_SORTS = new Set<RegistrySort>([
   'model-id',
 ]);
 
+const RECORDS_PER_PAGE_OPTIONS = [
+  { value: '100', label: '100', pageSize: 100 },
+  { value: '250', label: '250', pageSize: 250 },
+  { value: '500', label: '500', pageSize: 500 },
+  { value: '750', label: '750', pageSize: 750 },
+  { value: '1000', label: '1,000', pageSize: 1000 },
+  { value: 'all', label: 'All', pageSize: null },
+] as const;
+
 function parseRegistrySort(value: string | undefined): RegistrySort {
   return REGISTRY_SORTS.has(value as RegistrySort)
     ? (value as RegistrySort)
     : 'score';
 }
 
+function formatRecordCount(count: number): string {
+  return `${count.toLocaleString('en-US')} ${count === 1 ? 'record' : 'records'}`;
+}
+
+function parseRecordsPerPage(value: string | undefined): number | null {
+  const option = RECORDS_PER_PAGE_OPTIONS.find(
+    (candidate) => candidate.value === value,
+  );
+  return option === undefined ? REGISTRY_PAGE_SIZE : option.pageSize;
+}
+
+function recordsPerPageValue(pageSize: number | null): string {
+  return pageSize === null ? 'all' : pageSize.toString();
+}
+
 function registrySortUrls(
-  selected: { model: string; benchmark: string; metric: string },
+  selected: {
+    model: string;
+    benchmark: string;
+    metric: string;
+    'per-page': string;
+  },
   currentSort: RegistrySort,
   currentOrder: LeaderboardOrder,
 ): Record<RegistrySort, string> {
@@ -236,10 +266,15 @@ async function registryPage(
   database: Database | undefined,
   filter: RegistryRecordFilter,
   page: number,
+  pageSize: number | null = REGISTRY_PAGE_SIZE,
 ): Promise<RegistryRecordPage> {
   return database === undefined
-    ? { ...EMPTY_PAGE, page }
-    : getRegistryRecords(database, filter, page);
+    ? {
+        ...EMPTY_PAGE,
+        page: pageSize === null ? 1 : page,
+        pageSize: pageSize ?? 1,
+      }
+    : getRegistryRecords(database, filter, page, pageSize);
 }
 
 const indexRoutes: FastifyPluginCallback<RouteOptions> = (
@@ -262,6 +297,10 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
     const benchmarkSlug = request.query.benchmark?.trim().toLowerCase() || null;
     const metricSlug = request.query.metric?.trim().toLowerCase() || null;
     const sort = parseRegistrySort(request.query.sort);
+    const pageSize = parseRecordsPerPage(request.query['per-page']);
+    const selectedRecordsPerPage = recordsPerPageValue(pageSize);
+    const recordsPerPageParameter =
+      pageSize === REGISTRY_PAGE_SIZE ? '' : selectedRecordsPerPage;
     const order: LeaderboardOrder =
       request.query.order === 'asc' ? 'asc' : 'desc';
     const [result, update, options] = await Promise.all([
@@ -276,12 +315,18 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
           order,
         },
         page,
+        pageSize,
       ),
       database === undefined
         ? Promise.resolve(null)
         : getLastDatabaseUpdate(database),
       database === undefined
-        ? Promise.resolve({ models: [], benchmarks: [], metrics: [] })
+        ? Promise.resolve({
+            recordCount: 0,
+            models: [],
+            benchmarks: [],
+            metrics: [],
+          })
         : getLeaderboardOptions(database),
     ]);
     return reply.view('registry-page.eta', {
@@ -294,6 +339,7 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         includeSiteIdentity: true,
       }),
       query: '',
+      recordCountLabel: formatRecordCount(options.recordCount),
       heading: null,
       databaseUpdate: formatDatabaseUpdate(update),
       databaseUpdateInstant: databaseUpdateInstant(update),
@@ -324,11 +370,14 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         selectedMetric: metricSlug ?? '',
         sort,
         order,
+        recordsPerPageOptions: RECORDS_PER_PAGE_OPTIONS,
+        selectedRecordsPerPage,
         sortUrls: registrySortUrls(
           {
             model: selectedModelSlug ?? '',
             benchmark: benchmarkSlug ?? '',
             metric: metricSlug ?? '',
+            'per-page': recordsPerPageParameter,
           },
           sort,
           order,
@@ -340,6 +389,7 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         metric: metricSlug ?? '',
         sort,
         order,
+        'per-page': recordsPerPageParameter,
       }),
     });
   });

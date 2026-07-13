@@ -51,6 +51,14 @@
         <option value="asc"<% if (it.leaderboard.order === 'asc') { %> selected<% } %>>Ascending</option>
       </select>
     </div>
+    <div class="filter-field">
+      <label for="records-per-page-filter">Records per page</label>
+      <select id="records-per-page-filter" name="per-page">
+        <% it.leaderboard.recordsPerPageOptions.forEach(function(option) { %>
+          <option value="<%= option.value %>"<% if (option.value === it.leaderboard.selectedRecordsPerPage) { %> selected<% } %>><%= option.label %></option>
+        <% }) %>
+      </select>
+    </div>
     <button type="submit">Apply filters</button>
   </form>
   <p class="leaderboard-notice">Scores from different benchmarks, metrics, versions, or evaluation configurations are not necessarily comparable. Use the filters to narrow the records before drawing comparisons.</p>

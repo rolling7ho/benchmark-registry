@@ -130,6 +130,16 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
       expect(finalPage.page).toBe(Math.ceil(firstPage.total / 2));
       expect(finalPage.records.length).toBeGreaterThan(0);
       expect(finalPage.total).toBe(firstPage.total);
+
+      const allRecords = await getRegistryRecords(
+        database,
+        { kind: 'RECENT' },
+        999,
+        null,
+      );
+      expect(allRecords.page).toBe(1);
+      expect(allRecords.records).toHaveLength(firstPage.total);
+      expect(allRecords.pageSize).toBe(firstPage.total);
     });
 
     it('model identity forms return the same canonical record set', async () => {
@@ -305,6 +315,9 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
         url: '/records/BR-00155-001',
       });
       expect(root.statusCode).toBe(200);
+      expect(root.body).toContain(
+        '<span class="registry-record-count">5 records</span>',
+      );
       expect(root.body).not.toContain('<h1>Benchmark Records</h1>');
       expect(root.body).toContain('<th>Rank</th>');
       expect(root.body).toContain('Record No.');
@@ -327,6 +340,9 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
       expect(filtered.body).toContain('72.4');
       expect(filtered.body).toContain('69.2');
       expect(filtered.body).not.toContain('88.1%');
+      expect(filtered.body).toContain(
+        '<span class="registry-record-count">5 records</span>',
+      );
       expect(filtered.body).toContain(
         '<option value="deepswe" selected>DeepSWE</option>',
       );

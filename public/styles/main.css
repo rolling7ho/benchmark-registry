@@ -104,6 +104,11 @@ nav span {
   cursor: pointer;
   width: fit-content;
 }
+.registry-record-count {
+  margin-left: 8px;
+  color: #555;
+  font-variant-numeric: tabular-nums;
+}
 .search-operator-help p {
   margin: 4px 0;
 }

@@ -29,7 +29,7 @@
         <a class="site-title" href="/">BENCHMARK REGISTRY</a>
         <div class="site-description">Public Artificial Intelligence Benchmark Records Database</div>
       </header>
-      <%~ include('partials/search-form.eta', { query: it.query ?? '' }) %>
+      <%~ include('partials/search-form.eta', { query: it.query ?? '', recordCountLabel: it.recordCountLabel ?? null }) %>
       <%~ include('partials/nav.eta') %>
       <%~ it.body %>
       <footer class="site-footer">

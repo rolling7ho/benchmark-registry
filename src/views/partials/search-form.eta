@@ -4,7 +4,7 @@
   <button type="submit">Search</button>
 </form>
 <details class="search-operator-help" id="search-operator-help">
-  <summary>Search operators</summary>
+  <summary>Search operators<% if (it.recordCountLabel !== null) { %><span class="registry-record-count"><%= it.recordCountLabel %></span><% } %></summary>
   <p><code>brand:</code> <code>benchmark:</code> <code>record:</code> <code>model:</code> <code>metric:</code> <code>date:</code> <code>org:</code></p>
   <p>Separate values with commas, or alternatives with uppercase <code>OR</code>. Example: <code>brand:Meta, Anthropic benchmark:GPQA</code></p>
 </details>

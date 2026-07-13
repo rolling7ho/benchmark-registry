@@ -20,6 +20,9 @@ describe('public application routes without a database', () => {
     expect(response.body).toContain('BENCHMARK REGISTRY');
     expect(response.body).toContain('action="/search"');
     expect(response.body).toContain('Search operators');
+    expect(response.body).toContain(
+      '<span class="registry-record-count">0 records</span>',
+    );
     expect(response.body).toContain('<code>brand:</code>');
     expect(response.body).toContain('uppercase <code>OR</code>');
     expect(response.body).toContain('Record No.');
@@ -29,6 +32,11 @@ describe('public application routes without a database', () => {
     expect(response.body).toContain('name="model"');
     expect(response.body).toContain('name="sort"');
     expect(response.body).toContain('name="order"');
+    expect(response.body).toContain('name="per-page"');
+    expect(response.body).toContain(
+      '<option value="100" selected>100</option>',
+    );
+    expect(response.body).toContain('<option value="all">All</option>');
     expect(response.body).toContain('Descending');
     expect(response.body).toContain('not necessarily comparable');
     expect(response.body).toContain('<th>Rank</th>');
@@ -111,11 +119,14 @@ describe('public application routes without a database', () => {
   it('keeps filter state in sortable column links', async () => {
     const response = await app.inject({
       method: 'GET',
-      url: '/?model=opnai-55&benchmark=deepswe&metric=overall&sort=model&order=asc',
+      url: '/?model=opnai-55&benchmark=deepswe&metric=overall&sort=model&order=asc&per-page=250',
     });
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain(
-      '/?model=opnai-55&amp;benchmark=deepswe&amp;metric=overall&amp;sort=model&amp;order=desc',
+      '/?model=opnai-55&amp;benchmark=deepswe&amp;metric=overall&amp;per-page=250&amp;sort=model&amp;order=desc',
+    );
+    expect(response.body).toContain(
+      '<option value="250" selected>250</option>',
     );
     expect(response.body).toContain('No records match the selected filters.');
     expect(response.body).toContain('Clear all filters');
@@ -128,6 +139,21 @@ describe('public application routes without a database', () => {
     expect(response.body).toContain(
       '<input type="hidden" name="metric" value="overall">',
     );
+    expect(response.body).toContain(
+      '<input type="hidden" name="per-page" value="250">',
+    );
+  });
+
+  it('treats all records as a single page', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/?per-page=all&page=999',
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain(
+      '<option value="all" selected>All</option>',
+    );
+    expect(response.body).toContain('Page 1 of 1');
   });
 
   it.each(['/models', '/benchmarks', '/organizations', '/recent', '/sources'])(

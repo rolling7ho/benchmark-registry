@@ -56,6 +56,7 @@ export interface LeaderboardOption {
 }
 
 export interface LeaderboardOptions {
+  recordCount: number;
   models: LeaderboardOption[];
   benchmarks: LeaderboardOption[];
   metrics: LeaderboardOption[];
@@ -373,13 +374,13 @@ export async function getRegistryRecords(
   db: Database,
   filter: RegistryRecordFilter,
   page = 1,
-  pageSize = REGISTRY_PAGE_SIZE,
+  pageSize: number | null = REGISTRY_PAGE_SIZE,
 ): Promise<RegistryRecordPage> {
   const filtered = applyFilter(joinedRecords(db), filter);
   let total: number;
   let effectivePage: number;
 
-  if (page === 1) {
+  if (pageSize === null || page === 1) {
     total = 0;
     effectivePage = 1;
   } else {
@@ -390,7 +391,7 @@ export async function getRegistryRecords(
     total = Number(countRow.count);
     effectivePage = Math.min(page, Math.max(1, Math.ceil(total / pageSize)));
   }
-  const offset = (effectivePage - 1) * pageSize;
+  const offset = (effectivePage - 1) * (pageSize ?? 0);
 
   let resultQuery = filtered.clearSelect().select([
     'benchmark_records.record_id as recordId',
@@ -457,9 +458,11 @@ export async function getRegistryRecords(
       .orderBy('benchmark_records.record_id', 'asc');
   }
 
-  const rows = await resultQuery.limit(pageSize).offset(offset).execute();
+  const rows = await (
+    pageSize === null ? resultQuery : resultQuery.limit(pageSize).offset(offset)
+  ).execute();
 
-  if (page === 1) {
+  if (pageSize === null || page === 1) {
     total = rows[0] === undefined ? 0 : Number(rows[0].totalCount);
   }
 
@@ -483,7 +486,7 @@ export async function getRegistryRecords(
       recordStatus: row.recordStatus,
     })),
     page: effectivePage,
-    pageSize,
+    pageSize: pageSize ?? Math.max(total, 1),
     total,
   };
 }
@@ -491,7 +494,12 @@ export async function getRegistryRecords(
 export async function getLeaderboardOptions(
   db: Database,
 ): Promise<LeaderboardOptions> {
-  const [models, benchmarks, metrics] = await Promise.all([
+  const [recordCountRow, models, benchmarks, metrics] = await Promise.all([
+    db
+      .selectFrom('benchmark_records')
+      .select((eb) => eb.fn.countAll<string>().as('count'))
+      .where('benchmark_records.status', '=', 'ACTIVE')
+      .executeTakeFirstOrThrow(),
     db
       .selectFrom('benchmark_records')
       .innerJoin('models', 'models.id', 'benchmark_records.model_id')
@@ -524,5 +532,10 @@ export async function getLeaderboardOptions(
       .orderBy('metrics.name', 'asc')
       .execute(),
   ]);
-  return { models, benchmarks, metrics };
+  return {
+    recordCount: Number(recordCountRow.count),
+    models,
+    benchmarks,
+    metrics,
+  };
 }
