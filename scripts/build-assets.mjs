@@ -3,7 +3,8 @@ import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 
-import { transform } from 'lightningcss';
+import { transform as transformCss } from 'lightningcss';
+import { transform as transformJs } from 'esbuild';
 
 const projectRoot = fileURLToPath(new URL('..', import.meta.url));
 const sourcePublicDirectory = path.join(projectRoot, 'public');
@@ -21,12 +22,18 @@ const outputScriptsDirectory = path.join(outputPublicDirectory, 'scripts');
 
 const sourceCss = await readFile(sourceStylesheet);
 const favicon = await readFile(sourceFavicon);
-const script = await readFile(sourceScript);
-const { code: minifiedCss } = transform({
+const script = await readFile(sourceScript, 'utf8');
+const { code: minifiedCss } = transformCss({
   code: sourceCss,
   filename: sourceStylesheet,
   minify: true,
   sourceMap: false,
+});
+const { code: minifiedScript } = await transformJs(script, {
+  loader: 'js',
+  minify: true,
+  target: 'es2019',
+  sourcefile: sourceScript,
 });
 const contentHash = createHash('sha256')
   .update(minifiedCss)
@@ -39,7 +46,7 @@ const faviconHash = createHash('sha256')
   .slice(0, 12);
 const generatedFavicon = `favicon.${faviconHash}.svg`;
 const scriptHash = createHash('sha256')
-  .update(script)
+  .update(minifiedScript)
   .digest('hex')
   .slice(0, 12);
 const generatedScript = `scripts/record-actions.${scriptHash}.js`;
@@ -60,7 +67,10 @@ await writeFile(
   minifiedCss,
 );
 await writeFile(path.join(outputPublicDirectory, generatedFavicon), favicon);
-await writeFile(path.join(outputPublicDirectory, generatedScript), script);
+await writeFile(
+  path.join(outputPublicDirectory, generatedScript),
+  minifiedScript,
+);
 await writeFile(
   path.join(outputDirectory, 'asset-manifest.json'),
   `${JSON.stringify(

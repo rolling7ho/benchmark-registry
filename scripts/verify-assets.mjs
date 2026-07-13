@@ -41,17 +41,28 @@ const generatedFaviconFile = path.join(
   'public',
   generatedFaviconPath,
 );
+const generatedScriptFile = path.join(
+  outputDirectory,
+  'public',
+  generatedScriptPath,
+);
 await access(generatedFile);
 await access(generatedFaviconFile);
-await access(path.join(outputDirectory, 'public', generatedScriptPath));
+await access(generatedScriptFile);
 await access(path.join(outputDirectory, 'views', 'layout.eta'));
 
-const [sourceSize, generatedSize] = await Promise.all([
-  stat(path.join(projectRoot, 'public', 'styles', 'main.css')),
-  stat(generatedFile),
-]);
+const [sourceSize, generatedSize, sourceScriptSize, generatedScriptSize] =
+  await Promise.all([
+    stat(path.join(projectRoot, 'public', 'styles', 'main.css')),
+    stat(generatedFile),
+    stat(path.join(projectRoot, 'public', 'scripts', 'record-actions.js')),
+    stat(generatedScriptFile),
+  ]);
 if (generatedSize.size >= sourceSize.size) {
   throw new Error('The generated stylesheet was not smaller than its source.');
+}
+if (generatedScriptSize.size >= sourceScriptSize.size) {
+  throw new Error('The generated script was not smaller than its source.');
 }
 
 const generatedStyles = await readdir(
@@ -65,5 +76,6 @@ if (
 }
 
 process.stdout.write(
-  `Verified ${generatedPath} (${generatedSize.size} bytes; source ${sourceSize.size} bytes).\n`,
+  `Verified ${generatedPath} (${generatedSize.size} bytes; source ${sourceSize.size} bytes).\n` +
+    `Verified ${generatedScriptPath} (${generatedScriptSize.size} bytes; source ${sourceScriptSize.size} bytes).\n`,
 );

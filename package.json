@@ -53,6 +53,7 @@
     "@eslint/js": "10.0.1",
     "@types/node": "26.1.1",
     "@types/pg": "8.20.0",
+    "esbuild": "0.28.1",
     "eslint": "10.7.0",
     "lightningcss": "1.32.0",
     "node-pg-migrate": "8.0.4",
