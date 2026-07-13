@@ -19,6 +19,7 @@ import { modelSlug } from '../web/seo.js';
 export const REGISTRY_PAGE_SIZE = 100;
 
 export interface PublicRegistryRecord {
+  rank: number | null;
   recordId: string;
   modelId: string;
   modelSlug: string;
@@ -391,23 +392,25 @@ export async function getRegistryRecords(
   }
   const offset = (effectivePage - 1) * pageSize;
 
-  let resultQuery = filtered
-    .clearSelect()
-    .select([
-      'benchmark_records.record_id as recordId',
-      'models.model_id as modelId',
-      'models.official_name as modelName',
-      'benchmarks.slug as benchmarkSlug',
-      'benchmarks.name as benchmarkName',
-      'benchmark_versions.version_label as benchmarkVersionLabel',
-      'benchmark_versions.variant_name as benchmarkVariantName',
-      'metrics.name as metricName',
-      'benchmark_records.score_display as scoreDisplay',
-      'benchmark_records.evaluation_date as evaluationDate',
-      'sources.url as sourceUrl',
-      'benchmark_records.status as recordStatus',
-      sql<string>`count(*) over ()`.as('totalCount'),
-    ]);
+  let resultQuery = filtered.clearSelect().select([
+    'benchmark_records.record_id as recordId',
+    'models.model_id as modelId',
+    'models.official_name as modelName',
+    'benchmarks.slug as benchmarkSlug',
+    'benchmarks.name as benchmarkName',
+    'benchmark_versions.version_label as benchmarkVersionLabel',
+    'benchmark_versions.variant_name as benchmarkVariantName',
+    'metrics.name as metricName',
+    'benchmark_records.score_display as scoreDisplay',
+    sql<number | null>`case
+        when benchmark_records.score_value is null then null
+        else rank() over (order by benchmark_records.score_value desc nulls last)::integer
+      end`.as('rank'),
+    'benchmark_records.evaluation_date as evaluationDate',
+    'sources.url as sourceUrl',
+    'benchmark_records.status as recordStatus',
+    sql<string>`count(*) over ()`.as('totalCount'),
+  ]);
 
   if (filter.kind === 'RECENT') {
     resultQuery = resultQuery
@@ -462,6 +465,7 @@ export async function getRegistryRecords(
 
   return {
     records: rows.map((row) => ({
+      rank: row.rank,
       recordId: row.recordId,
       modelId: row.modelId,
       modelSlug: modelSlug(row.modelId),

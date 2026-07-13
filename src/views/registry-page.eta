@@ -1,7 +1,7 @@
 <% layout('layout.eta') %>
 <% if (it.heading !== null) { %><h1><%= it.heading %></h1><% } %>
 <% if (it.databaseUpdate !== null) { %>
-  <p class="database-update">Last database update: <%= it.databaseUpdate %></p>
+  <p class="database-update">Last database update: <% if (it.databaseUpdateInstant !== null) { %><time datetime="<%= it.databaseUpdateInstant %>" data-local-datetime><%= it.databaseUpdate %></time><% } else { %><%= it.databaseUpdate %><% } %></p>
 <% } %>
 <% if (it.leaderboard) { %>
   <form class="leaderboard-filters" method="get" action="/">
@@ -56,5 +56,5 @@
   <p class="leaderboard-notice">Scores from different benchmarks, metrics, versions, or evaluation configurations are not necessarily comparable. Use the filters to narrow the records before drawing comparisons.</p>
 <% } %>
 <% if (it.statusNotice !== null) { %><p class="status-notice"><%= it.statusNotice %></p><% } %>
-<%~ include('partials/registry-table.eta', { records: it.records, emptyMessage: it.emptyMessage, emptyDescription: it.emptyDescription, emptyAction: it.emptyAction, sort: it.leaderboard?.sort, order: it.leaderboard?.order, sortUrls: it.leaderboard?.sortUrls }) %>
+<%~ include('partials/registry-table.eta', { records: it.records, emptyMessage: it.emptyMessage, emptyDescription: it.emptyDescription, emptyAction: it.emptyAction, showRank: it.leaderboard !== null, sort: it.leaderboard?.sort, order: it.leaderboard?.order, sortUrls: it.leaderboard?.sortUrls }) %>
 <% if (it.pagination !== null) { %><%~ include('partials/pagination.eta', it.pagination) %><% } %>

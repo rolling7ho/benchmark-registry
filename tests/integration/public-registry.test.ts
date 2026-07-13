@@ -305,10 +305,21 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
         url: '/records/BR-00155-001',
       });
       expect(root.statusCode).toBe(200);
+      expect(root.body).not.toContain('<h1>Benchmark Records</h1>');
+      expect(root.body).toContain('<th>Rank</th>');
       expect(root.body).toContain('Record No.');
+      expect(root.body).toMatch(
+        /Last database update: <time datetime="[^"]+Z" data-local-datetime>[^<]+ PHT<\/time>/,
+      );
       expect(root.body).not.toContain('Benchmark Records Leaderboard');
       expect(root.body.indexOf('88.1%')).toBeLessThan(
         root.body.indexOf('69.2'),
+      );
+      expect(root.body).toMatch(
+        /<td>1<\/td>\s*<td><a href="\/records\/BR-00155-002"/,
+      );
+      expect(root.body).toMatch(
+        /<td>5<\/td>\s*<td><a href="\/records\/BR-002O48-001"/,
       );
       expect(ascending.body.indexOf('69.2')).toBeLessThan(
         ascending.body.indexOf('88.1%'),

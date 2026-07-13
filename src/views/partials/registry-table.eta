@@ -3,6 +3,7 @@
   <table class="registry-table">
     <thead>
       <tr>
+        <% if (it.showRank) { %><th>Rank</th><% } %>
         <th><% if (it.sortUrls) { %><a class="sort-link" href="<%= it.sortUrls.record %>">Record No.<% if (it.sort === 'record') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Record No.<% } %></th>
         <th><% if (it.sortUrls) { %><a class="sort-link" href="<%= it.sortUrls.model %>">Model<% if (it.sort === 'model') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Model<% } %></th>
         <th><% if (it.sortUrls) { %><a class="sort-link" href="<%= it.sortUrls.benchmark %>">Benchmark<% if (it.sort === 'benchmark') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Benchmark<% } %></th>
@@ -15,10 +16,11 @@
     </thead>
     <tbody>
       <% if (it.records.length === 0) { %>
-        <tr><td colspan="8" class="empty-state"><strong><%= it.emptyMessage %></strong><% if (it.emptyDescription) { %><span><%= it.emptyDescription %></span><% } %><% if (it.emptyAction) { %><a href="<%= it.emptyAction.url %>"><%= it.emptyAction.label %></a><% } %></td></tr>
+        <tr><td colspan="<%= it.showRank ? 9 : 8 %>" class="empty-state"><strong><%= it.emptyMessage %></strong><% if (it.emptyDescription) { %><span><%= it.emptyDescription %></span><% } %><% if (it.emptyAction) { %><a href="<%= it.emptyAction.url %>"><%= it.emptyAction.label %></a><% } %></td></tr>
       <% } %>
       <% it.records.forEach(function(record) { %>
         <tr>
+          <% if (it.showRank) { %><td><%= record.rank ?? '—' %></td><% } %>
           <td><a href="/records/<%= encodeURIComponent(record.recordId) %>"><code class="identifier"><%= record.recordId %></code></a> <button class="compact-action" type="button" data-copy-value="<%= record.recordId %>" data-default-label="Copy ID" aria-label="Copy record identifier <%= record.recordId %>">Copy ID</button></td>
           <td><a href="/models/<%= encodeURIComponent(record.modelSlug) %>"><%= record.modelName %></a></td>
           <td><a href="/benchmarks/<%= encodeURIComponent(record.benchmarkSlug) %>"><%= record.benchmarkName %></a></td>

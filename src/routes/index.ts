@@ -151,6 +151,12 @@ function formatDatabaseUpdate(value: string | null): string {
   return `${parts} PHT`;
 }
 
+function databaseUpdateInstant(value: string | null): string | null {
+  if (value === null) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 function formatStructuredValue(
   value: Record<string, unknown>,
   indentation = '',
@@ -288,8 +294,9 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         includeSiteIdentity: true,
       }),
       query: '',
-      heading: 'Benchmark Records',
+      heading: null,
       databaseUpdate: formatDatabaseUpdate(update),
+      databaseUpdateInstant: databaseUpdateInstant(update),
       records: result.records,
       emptyMessage:
         selectedModelSlug !== null ||

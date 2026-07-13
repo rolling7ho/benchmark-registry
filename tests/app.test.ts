@@ -31,11 +31,13 @@ describe('public application routes without a database', () => {
     expect(response.body).toContain('name="order"');
     expect(response.body).toContain('Descending');
     expect(response.body).toContain('not necessarily comparable');
-    expect(response.body).not.toContain('<th>Rank</th>');
+    expect(response.body).toContain('<th>Rank</th>');
+    expect(response.body).not.toContain('<h1>Benchmark Records</h1>');
     expect(response.body.indexOf('<th>Source</th>')).toBeLessThan(
       response.body.indexOf('sort=model-id'),
     );
     expect(response.body).toContain('Last database update: Not available');
+    expect(response.body).not.toContain('data-local-datetime');
     expect(response.body).toContain(
       '<meta name="viewport" content="width=device-width, initial-scale=1">',
     );
@@ -102,6 +104,8 @@ describe('public application routes without a database', () => {
     expect(response.headers['cache-control']).toContain('max-age=0');
     expect(response.body).toContain('navigator.clipboard.writeText');
     expect(response.body).toContain('navigator.share');
+    expect(response.body).toContain('time[data-local-datetime]');
+    expect(response.body).toContain("timeZoneName: 'short'");
   });
 
   it('keeps filter state in sortable column links', async () => {
