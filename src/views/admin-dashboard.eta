@@ -1,7 +1,0 @@
-<% layout('layout.eta') %>
-<h1>Administration</h1>
-<p class="admin-context">Internal administrator tools. Nothing on this page is part of the public registry.</p>
-<ul class="admin-nav-list">
-  <li><a href="/admin/ingest">Source-assisted ingestion</a> — retrieve sources, review extracted candidates, and publish benchmark records.</li>
-  <li><a href="/admin/feedback">Feedback submissions</a> — review reported corrections and issues.</li>
-</ul>

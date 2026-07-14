@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import fastifyView from '@fastify/view';
 import Fastify, { type FastifyInstance } from 'fastify';
@@ -17,8 +16,6 @@ import { registerDynamicResponseCaching } from './plugins/response-cache.js';
 import { registerSecurityHeaders } from './plugins/security.js';
 import indexRoutes from './routes/index.js';
 import feedbackRoutes from './routes/feedback.js';
-import adminIngestRoutes from './routes/admin-ingest.js';
-import { MAX_SOURCE_BYTES } from './ingestion/types.js';
 import {
   createDatabaseRequestRateLimiter,
   type RequestRateLimiter,
@@ -156,14 +153,6 @@ export function createApp(options: CreateAppOptions = {}): FastifyInstance {
 
   void app.register(feedbackRoutes, {
     store: feedbackStore,
-    adminAuth: options.adminAuth,
-    requestRateLimiter,
-  });
-  void app.register(fastifyMultipart, {
-    limits: { fileSize: MAX_SOURCE_BYTES, files: 1 },
-  });
-  void app.register(adminIngestRoutes, {
-    database,
     adminAuth: options.adminAuth,
     requestRateLimiter,
   });
