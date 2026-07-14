@@ -1,13 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
-import type {
-  FastifyPluginCallback,
-  FastifyReply,
-  FastifyRequest,
-} from 'fastify';
+import type { FastifyPluginCallback, FastifyReply } from 'fastify';
 
 import type { AdminAuthConfig } from '../admin/auth.js';
-import { isAuthorizedAdmin } from '../admin/auth.js';
+import { requireAdmin } from '../admin/require-admin.js';
 import type { FeedbackStore } from '../feedback/types.js';
 import {
   FEEDBACK_STATUSES,
@@ -100,42 +96,6 @@ function renderFeedbackForm(
       label: FEEDBACK_TYPE_LABELS[value],
     })),
   });
-}
-
-async function requireAdmin(
-  request: FastifyRequest,
-  reply: FastifyReply,
-  options: FeedbackRouteOptions,
-): Promise<boolean> {
-  reply
-    .header('Cache-Control', 'no-store')
-    .header('X-Robots-Tag', 'noindex, nofollow');
-  if (options.adminAuth === undefined) {
-    void reply.status(503).send('Administrator access is not configured.');
-    return false;
-  }
-  if (!isAuthorizedAdmin(request, options.adminAuth)) {
-    if (options.requestRateLimiter !== undefined) {
-      const rateLimit = await options.requestRateLimiter.consume(request, {
-        scope: 'admin-authentication',
-        limit: 10,
-        windowSeconds: 15 * 60,
-      });
-      if (!rateLimit.allowed) {
-        void reply
-          .header('Retry-After', String(rateLimit.retryAfterSeconds))
-          .status(429)
-          .send('Too many authentication attempts.');
-        return false;
-      }
-    }
-    void reply
-      .header('WWW-Authenticate', 'Basic realm="Benchmark Registry Admin"')
-      .status(401)
-      .send('Authentication required.');
-    return false;
-  }
-  return true;
 }
 
 function parseStatus(value: string | undefined): FeedbackStatus | undefined {
