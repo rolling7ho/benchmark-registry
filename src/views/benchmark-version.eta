@@ -1,5 +1,7 @@
 <% layout('layout.eta') %>
+<%~ include('partials/breadcrumbs.eta', { items: it.breadcrumbs }) %>
 <h1><%= it.benchmark.name %>: <%= it.version.variantName ?? it.version.versionLabel ?? 'Unspecified' %></h1>
+<p class="page-summary"><%= it.description %></p>
 <dl class="record-metadata"><dt>Benchmark Family</dt><dd><a href="/benchmarks/<%= encodeURIComponent(it.benchmark.slug) %>"><%= it.benchmark.name %></a></dd><dt>Version or Variant</dt><dd><%= it.version.variantName ?? it.version.versionLabel ?? 'Unknown' %></dd><dt>Canonical Reference</dt><dd><code><%= it.version.canonicalReference %></code></dd><dt>Release Date</dt><dd><%= it.version.releaseDate ?? 'Unknown' %></dd><dt>Status</dt><dd><%= it.version.status %></dd></dl>
 <%~ include('partials/registry-table.eta', { records: it.records, emptyMessage: it.emptyMessage }) %>
 <%~ include('partials/pagination.eta', it.pagination) %>

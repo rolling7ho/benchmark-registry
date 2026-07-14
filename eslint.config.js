@@ -10,6 +10,7 @@ export default defineConfig(
       'node_modules/**',
       '.remember/**',
       'scripts/_aa_*.ts',
+      'scripts/tmp-*.mjs',
     ],
   },
   eslint.configs.recommended,

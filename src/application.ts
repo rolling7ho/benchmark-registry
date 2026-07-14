@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -55,6 +56,11 @@ export function createApp(options: CreateAppOptions = {}): FastifyInstance {
     ? path.join(runtimeDirectory, 'public')
     : path.join(projectRoot, 'public');
   const assetPath = createAssetPath(production, runtimeDirectory);
+  const favicon = readFileSync(path.join(publicDirectory, 'favicon.png'));
+  const logo = readFileSync(path.join(publicDirectory, 'logo.png'));
+  const socialCard = readFileSync(
+    path.join(publicDirectory, 'social-card.png'),
+  );
 
   registerSecurityHeaders(app);
   registerCompression(app, production);
@@ -88,7 +94,7 @@ export function createApp(options: CreateAppOptions = {}): FastifyInstance {
       seo: createPageSeo({
         title: `${statusCode} — Benchmark Registry`,
         description: message,
-        index: false,
+        policy: 'NON_INDEXABLE',
       }),
       statusCode,
       message,
@@ -114,6 +120,25 @@ export function createApp(options: CreateAppOptions = {}): FastifyInstance {
     immutable: production,
     maxAge: production ? '1y' : 0,
   });
+
+  app.get('/favicon.png', (_request, reply) =>
+    reply
+      .header('Cache-Control', 'public, max-age=3600, must-revalidate')
+      .type('image/png')
+      .send(favicon),
+  );
+  app.get('/logo.png', (_request, reply) =>
+    reply
+      .header('Cache-Control', 'public, max-age=3600, must-revalidate')
+      .type('image/png')
+      .send(logo),
+  );
+  app.get('/social-card.png', (_request, reply) =>
+    reply
+      .header('Cache-Control', 'public, max-age=3600, must-revalidate')
+      .type('image/png')
+      .send(socialCard),
+  );
 
   const database = options.database;
 

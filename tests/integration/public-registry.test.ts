@@ -49,6 +49,8 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
       ['GPT-5.5', 'MODEL'],
       ['GPT 5.5', 'MODEL'],
       ['gpt_5.5', 'MODEL'],
+      ['GPT55', 'MODEL'],
+      ['gpt.55', 'MODEL'],
       ['DeepSWE', 'BENCHMARK'],
       ['OpenAI', 'ORGANIZATION'],
       ['OPNAI', 'ORGANIZATION'],
@@ -144,27 +146,29 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
 
     it('model identity forms return the same canonical record set', async () => {
       const resultSets = await Promise.all(
-        ['BR-00155', 'OPNAI-55', 'GPT-5.5', 'GPT 5.5'].map(async (query) => {
-          const resolution = await resolveSearch(database, query);
-          if (
-            resolution.kind !== 'RECORD_PREFIX' &&
-            resolution.kind !== 'MODEL'
-          )
-            throw new Error('Expected a model resolution');
-          return (
-            await getRegistryRecords(database, {
-              ...(resolution.kind === 'MODEL'
-                ? {
-                    kind: 'MODEL' as const,
-                    modelInternalId: resolution.modelInternalId,
-                  }
-                : {
-                    kind: 'RECORD_PREFIX' as const,
-                    recordPrefix: resolution.recordPrefix,
-                  }),
-            })
-          ).records.map((record) => record.recordId);
-        }),
+        ['BR-00155', 'OPNAI-55', 'GPT-5.5', 'GPT 5.5', 'GPT55'].map(
+          async (query) => {
+            const resolution = await resolveSearch(database, query);
+            if (
+              resolution.kind !== 'RECORD_PREFIX' &&
+              resolution.kind !== 'MODEL'
+            )
+              throw new Error('Expected a model resolution');
+            return (
+              await getRegistryRecords(database, {
+                ...(resolution.kind === 'MODEL'
+                  ? {
+                      kind: 'MODEL' as const,
+                      modelInternalId: resolution.modelInternalId,
+                    }
+                  : {
+                      kind: 'RECORD_PREFIX' as const,
+                      recordPrefix: resolution.recordPrefix,
+                    }),
+              })
+            ).records.map((record) => record.recordId);
+          },
+        ),
       );
       expect(resultSets[0]).toEqual([
         'BR-00155-003',
@@ -306,6 +310,10 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
         method: 'GET',
         url: '/search?q=OPNAI-55',
       });
+      const modelPage = await app.inject({
+        method: 'GET',
+        url: '/models/opnai-55',
+      });
       const name = await app.inject({
         method: 'GET',
         url: '/search?q=GPT-5.5',
@@ -316,10 +324,13 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
       });
       expect(root.statusCode).toBe(200);
       expect(root.body).toContain(
+        '<h1>Artificial Intelligence Benchmark Registry</h1>',
+      );
+      expect(root.body).toContain(
         '<span class="registry-record-count">5 records</span>',
       );
       expect(root.body).not.toContain('<h1>Benchmark Records</h1>');
-      expect(root.body).toContain('<th>Rank</th>');
+      expect(root.body).not.toContain('<th>Rank</th>');
       expect(root.body).toContain('Record No.');
       expect(root.body).toMatch(
         /Last database update: <time datetime="[^"]+Z" data-local-datetime>[^<]+ PHT<\/time>/,
@@ -328,12 +339,8 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
       expect(root.body.indexOf('88.1%')).toBeLessThan(
         root.body.indexOf('69.2'),
       );
-      expect(root.body).toMatch(
-        /<td>1<\/td>\s*<td><a href="\/records\/BR-00155-002"/,
-      );
-      expect(root.body).toMatch(
-        /<td>5<\/td>\s*<td><a href="\/records\/BR-002O48-001"/,
-      );
+      expect(root.body).toContain('<td><a href="/records/BR-00155-002"');
+      expect(root.body).toContain('<td><a href="/records/BR-002O48-001"');
       expect(ascending.body.indexOf('69.2')).toBeLessThan(
         ascending.body.indexOf('88.1%'),
       );
@@ -345,6 +352,9 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
       );
       expect(filtered.body).toContain(
         '<option value="deepswe" selected>DeepSWE</option>',
+      );
+      expect(filtered.body).toContain(
+        '<meta name="robots" content="noindex,follow">',
       );
       expect(modelFiltered.body).toContain(
         '<option value="opnai-55" selected>GPT-5.5</option>',
@@ -361,8 +371,27 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
       expect(exact.body).not.toContain('BR-00155-002');
       expect(modelId.body).toContain('BR-00155-002');
       expect(name.body).toContain('BR-00155-002');
+      expect(modelPage.statusCode).toBe(200);
+      expect(modelPage.body).toContain(
+        '<meta name="description" content="Browse 3 records for GPT-5.5 by OpenAI. Review reported scores, metrics, primary sources, and evaluation dates. Model ID: OPNAI-55.">',
+      );
+      expect(modelPage.body).toContain(
+        '<p class="page-summary">Browse 3 records for GPT-5.5 by OpenAI. Review reported scores, metrics, primary sources, and evaluation dates. Model ID: OPNAI-55.</p>',
+      );
+      expect(modelPage.body).toContain(
+        'aria-label="Benchmark registry records table" data-nosnippet',
+      );
+      expect(modelPage.body).toContain('aria-label="Breadcrumb"');
+      expect(modelPage.body).toContain('"@type":"BreadcrumbList"');
+      expect(modelPage.body).toContain(
+        '<a href="/organizations/openai">OpenAI</a>',
+      );
       expect(detail.statusCode).toBe(200);
       expect(detail.body).toContain('BENCHMARK RECORD:');
+      expect(detail.body).toContain(
+        '<p class="page-summary">Reported Overall result of 72.4',
+      );
+      expect(detail.body).toContain('aria-label="Breadcrumb"');
       expect(detail.body).toContain('Evaluation Context');
       expect(detail.body).toContain('Provenance');
       expect(detail.body).toContain('Copy record ID');
@@ -380,6 +409,14 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
       ).toBe(404);
       expect(
         (await app.inject({ method: 'GET', url: '/models/UNKNOWN' }))
+          .statusCode,
+      ).toBe(404);
+      expect(
+        (await app.inject({ method: 'GET', url: '/?model=unknown-model' }))
+          .statusCode,
+      ).toBe(404);
+      expect(
+        (await app.inject({ method: 'GET', url: '/recent?page=999' }))
           .statusCode,
       ).toBe(404);
       await app.close();

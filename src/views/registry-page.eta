@@ -64,5 +64,34 @@
   <p class="leaderboard-notice">Scores from different benchmarks, metrics, versions, or evaluation configurations are not necessarily comparable. Use the filters to narrow the records before drawing comparisons.</p>
 <% } %>
 <% if (it.statusNotice !== null) { %><p class="status-notice"><%= it.statusNotice %></p><% } %>
-<%~ include('partials/registry-table.eta', { records: it.records, emptyMessage: it.emptyMessage, emptyDescription: it.emptyDescription, emptyAction: it.emptyAction, showRank: it.leaderboard !== null, sort: it.leaderboard?.sort, order: it.leaderboard?.order, sortUrls: it.leaderboard?.sortUrls }) %>
+<%~ include('partials/registry-table.eta', { records: it.records, emptyMessage: it.emptyMessage, emptyDescription: it.emptyDescription, emptyAction: it.emptyAction, sort: it.leaderboard?.sort, order: it.leaderboard?.order, sortUrls: it.leaderboard?.sortUrls }) %>
 <% if (it.pagination !== null) { %><%~ include('partials/pagination.eta', it.pagination) %><% } %>
+<% if (it.leaderboard) { %>
+  <div class="documentation homepage-information">
+    <section aria-labelledby="about-benchmark-registry">
+      <h2 id="about-benchmark-registry">About Benchmark Registry</h2>
+      <p>Benchmark Registry is a public database of reported artificial intelligence benchmark results. It indexes publicly reported benchmark measurements from model providers, benchmark publishers, researchers, evaluators, technical reports, model cards, and other identified sources.</p>
+      <p>Each Benchmark Record represents one reported benchmark measurement within its known evaluation context. Records include the evaluated model, benchmark, reported metric, source, and a stable Benchmark Record Identifier.</p>
+      <p>Benchmark Registry is an archival and reference resource. It does not create composite scores or independently verify benchmark results unless a record explicitly states otherwise. Results are presented together with their original sources so readers can review the underlying methodology and evaluation context.</p>
+      <p>Because benchmark names may represent different benchmark versions, evaluation harnesses, prompts, model snapshots, scoring methods, or configurations, results should not automatically be treated as directly comparable without consulting the cited source.</p>
+      <p>The registry is continuously updated as new frontier models, benchmark results, and corrections become publicly available.</p>
+    </section>
+    <section aria-labelledby="searchable-registry-fields">
+      <h2 id="searchable-registry-fields">What can you search?</h2>
+      <p>Users can search for:</p>
+      <ul>
+        <li>AI models</li>
+        <li>AI benchmarks</li>
+        <li>Benchmark Record Identifiers</li>
+        <li>Model Identifiers</li>
+        <li>Metrics</li>
+        <li>Benchmark variants</li>
+      </ul>
+    </section>
+    <section aria-labelledby="how-benchmark-registry-works">
+      <h2 id="how-benchmark-registry-works">How Benchmark Registry works</h2>
+      <p>One benchmark record represents one reported benchmark measurement. Different benchmark metrics for the same benchmark are intentionally stored as separate records.</p>
+      <p>Benchmark Record Identifiers remain stable if contextual metadata is corrected or expanded. Every record references the original reported source.</p>
+    </section>
+  </div>
+<% } %>

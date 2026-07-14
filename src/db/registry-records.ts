@@ -10,6 +10,7 @@ import type { RegistryStatus } from './constants.js';
 import type { Database } from './database.js';
 import type { DatabaseSchema } from './types.js';
 import { formatBenchmarkDisplay } from '../registry/benchmark-display.js';
+import { compactSearchText } from '../search/normalize.js';
 import type {
   ParsedSearchQuery,
   SearchField,
@@ -19,7 +20,6 @@ import { modelSlug } from '../web/seo.js';
 export const REGISTRY_PAGE_SIZE = 100;
 
 export interface PublicRegistryRecord {
-  rank: number;
   recordId: string;
   modelId: string;
   modelSlug: string;
@@ -112,18 +112,32 @@ function escapedLikePattern(query: string): string {
   return `%${query.replace(/[\\%_]/g, '\\$&')}%`;
 }
 
+function escapedCompactLikePattern(query: string): string {
+  return `%${compactSearchText(query).replace(/[\\%]/g, '\\$&')}%`;
+}
+
+function matchesCompact(
+  column: string,
+  compactPattern: string,
+): Expression<SqlBool> {
+  return sql<boolean>`regexp_replace(lower(${sql.ref(column)}), '[\\s._-]', '', 'g') ilike ${compactPattern} escape '\\'`;
+}
+
 function generalSearchExpression(
   eb: ExpressionBuilder<DatabaseSchema, JoinedTable>,
   query: string,
 ): Expression<SqlBool> {
   const pattern = escapedLikePattern(query);
+  const compactPattern = escapedCompactLikePattern(query);
   const matches = (column: string): Expression<SqlBool> =>
     sql<boolean>`${sql.ref(column)} ilike ${pattern} escape '\\'`;
 
   return eb.or([
     matches('benchmark_records.record_id'),
     matches('models.model_id'),
+    matchesCompact('models.model_id', compactPattern),
     matches('models.official_name'),
+    matchesCompact('models.official_name', compactPattern),
     matches('benchmarks.name'),
     matches('benchmark_versions.canonical_reference'),
     matches('benchmark_versions.version_label'),
@@ -139,7 +153,7 @@ function generalSearchExpression(
           aliasEb.or([
             sql<boolean>`model_aliases.alias ilike ${pattern} escape '\\'`,
             sql<boolean>`model_aliases.normalized_alias ilike ${pattern} escape '\\'`,
-            sql<boolean>`model_aliases.compact_alias ilike ${pattern} escape '\\'`,
+            sql<boolean>`model_aliases.compact_alias ilike ${compactPattern} escape '\\'`,
           ]),
         ),
     ),
@@ -154,6 +168,7 @@ function fieldSearchExpression(
   if (field === null) return generalSearchExpression(eb, value);
 
   const pattern = escapedLikePattern(value);
+  const compactPattern = escapedCompactLikePattern(value);
   const matches = (column: string): Expression<SqlBool> =>
     sql<boolean>`${sql.ref(column)} ilike ${pattern} escape '\\'`;
 
@@ -180,7 +195,7 @@ function fieldSearchExpression(
               aliasEb.or([
                 sql<boolean>`benchmark_aliases.alias ilike ${pattern} escape '\\'`,
                 sql<boolean>`benchmark_aliases.normalized_alias ilike ${pattern} escape '\\'`,
-                sql<boolean>`benchmark_aliases.compact_alias ilike ${pattern} escape '\\'`,
+                sql<boolean>`benchmark_aliases.compact_alias ilike ${compactPattern} escape '\\'`,
               ]),
             ),
         ),
@@ -194,7 +209,9 @@ function fieldSearchExpression(
     case 'model':
       return eb.or([
         matches('models.model_id'),
+        matchesCompact('models.model_id', compactPattern),
         matches('models.official_name'),
+        matchesCompact('models.official_name', compactPattern),
         matches('models.family'),
         eb.exists(
           eb
@@ -205,7 +222,7 @@ function fieldSearchExpression(
               aliasEb.or([
                 sql<boolean>`model_aliases.alias ilike ${pattern} escape '\\'`,
                 sql<boolean>`model_aliases.normalized_alias ilike ${pattern} escape '\\'`,
-                sql<boolean>`model_aliases.compact_alias ilike ${pattern} escape '\\'`,
+                sql<boolean>`model_aliases.compact_alias ilike ${compactPattern} escape '\\'`,
               ]),
             ),
         ),
@@ -393,25 +410,23 @@ export async function getRegistryRecords(
   }
   const offset = (effectivePage - 1) * (pageSize ?? 0);
 
-  let resultQuery = filtered.clearSelect().select([
-    'benchmark_records.record_id as recordId',
-    'models.model_id as modelId',
-    'models.official_name as modelName',
-    'benchmarks.slug as benchmarkSlug',
-    'benchmarks.name as benchmarkName',
-    'benchmark_versions.version_label as benchmarkVersionLabel',
-    'benchmark_versions.variant_name as benchmarkVariantName',
-    'metrics.name as metricName',
-    'benchmark_records.score_display as scoreDisplay',
-    sql<number>`row_number() over (
-      order by benchmark_records.score_value desc nulls last,
-               benchmark_records.record_id asc
-    )::integer`.as('rank'),
-    'benchmark_records.evaluation_date as evaluationDate',
-    'sources.url as sourceUrl',
-    'benchmark_records.status as recordStatus',
-    sql<string>`count(*) over ()`.as('totalCount'),
-  ]);
+  let resultQuery = filtered
+    .clearSelect()
+    .select([
+      'benchmark_records.record_id as recordId',
+      'models.model_id as modelId',
+      'models.official_name as modelName',
+      'benchmarks.slug as benchmarkSlug',
+      'benchmarks.name as benchmarkName',
+      'benchmark_versions.version_label as benchmarkVersionLabel',
+      'benchmark_versions.variant_name as benchmarkVariantName',
+      'metrics.name as metricName',
+      'benchmark_records.score_display as scoreDisplay',
+      'benchmark_records.evaluation_date as evaluationDate',
+      'sources.url as sourceUrl',
+      'benchmark_records.status as recordStatus',
+      sql<string>`count(*) over ()`.as('totalCount'),
+    ]);
 
   if (filter.kind === 'RECENT') {
     resultQuery = resultQuery
@@ -468,7 +483,6 @@ export async function getRegistryRecords(
 
   return {
     records: rows.map((row) => ({
-      rank: row.rank,
       recordId: row.recordId,
       modelId: row.modelId,
       modelSlug: modelSlug(row.modelId),

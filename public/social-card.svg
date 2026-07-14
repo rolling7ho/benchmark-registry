@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#fafafa"/>
+  <rect width="1200" height="18" fill="#17365d"/>
+  <rect x="70" y="78" width="168" height="168" rx="20" fill="#17365d"/>
+  <path fill="#fff" d="M100 150h16v70h-16zM146 110h16v110h-16zM192 130h16v90h-16z"/>
+  <text x="286" y="150" fill="#17365d" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="700" letter-spacing="2">BENCHMARK REGISTRY</text>
+  <text x="286" y="207" fill="#333" font-family="Arial, Helvetica, sans-serif" font-size="29">Public Artificial Intelligence Benchmark Records Database</text>
+  <line x1="70" y1="294" x2="1130" y2="294" stroke="#53677e" stroke-width="4"/>
+  <line x1="70" y1="304" x2="1130" y2="304" stroke="#53677e" stroke-width="1"/>
+  <text x="70" y="382" fill="#17365d" font-family="Georgia, 'Times New Roman', serif" font-size="38">Reported evaluations. Stable identifiers. Primary sources.</text>
+  <text x="70" y="448" fill="#333" font-family="Arial, Helvetica, sans-serif" font-size="25">Models · Benchmarks · Metrics · Scores · Evaluation context · Provenance</text>
+  <rect x="70" y="510" width="1060" height="58" fill="#f1f3f5" stroke="#999"/>
+  <text x="96" y="548" fill="#17365d" font-family="'Courier New', monospace" font-size="24">www.benchmarkregistry.org</text>
+</svg>

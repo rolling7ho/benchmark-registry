@@ -13,13 +13,19 @@
     <meta property="og:title" content="<%= it.seo.title %>">
     <meta property="og:description" content="<%= it.seo.description %>">
     <% if (it.seo.canonicalUrl !== null) { %><meta property="og:url" content="<%= it.seo.canonicalUrl %>"><% } %>
-    <meta name="twitter:card" content="summary">
+    <meta property="og:image" content="<%= it.seo.socialImageUrl %>">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="<%= it.seo.socialImageAlt %>">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="<%= it.seo.title %>">
     <meta name="twitter:description" content="<%= it.seo.description %>">
-    <link rel="icon" href="<%= it.assetPath('favicon.svg') %>" type="image/svg+xml" sizes="any">
+    <meta name="twitter:image" content="<%= it.seo.socialImageUrl %>">
+    <meta name="twitter:image:alt" content="<%= it.seo.socialImageAlt %>">
+    <link rel="icon" href="/favicon.png" type="image/png" sizes="96x96">
     <% if (it.seo.jsonLd !== null) { %><script type="application/ld+json"><%~ it.seo.jsonLd %></script><% } %>
     <link rel="stylesheet" href="<%= it.assetPath('styles/main.css') %>">
-    <script src="<%= it.assetPath('scripts/record-actions.js') %>" defer></script>
+    <% if (it.recordActions === true) { %><script src="<%= it.assetPath('scripts/record-actions.js') %>" defer></script><% } %>
     <% if (it.production) { %><script defer src="/_vercel/insights/script.js"></script><% } %>
   </head>
   <body>
@@ -33,17 +39,23 @@
       <%~ include('partials/nav.eta') %>
       <%~ it.body %>
       <footer class="site-footer">
-        <hr>
-        <p class="footer-links" aria-label="Legal and project links">
-          <a href="/privacy">Privacy</a>
-          <span aria-hidden="true">·</span>
-          <a href="/terms">Terms</a>
-          <span aria-hidden="true">·</span>
-          <a href="/feedback">Feedback</a>
-          <span aria-hidden="true">·</span>
-          <a href="https://github.com/rolling7ho/benchmark-registry">GitHub</a>
-        </p>
-        <small>Benchmark Registry — Registry records are provided for reference purposes.</small>
+        <div data-nosnippet>
+          <hr>
+          <p class="footer-links" aria-label="Legal and project links">
+            <a href="/about">About</a>
+            <span aria-hidden="true">·</span>
+            <a href="/methodology">Methodology</a>
+            <span aria-hidden="true">·</span>
+            <a href="/privacy">Privacy</a>
+            <span aria-hidden="true">·</span>
+            <a href="/terms">Terms</a>
+            <span aria-hidden="true">·</span>
+            <a href="/feedback">Feedback</a>
+            <span aria-hidden="true">·</span>
+            <a href="https://github.com/rolling7ho/benchmark-registry">GitHub</a>
+          </p>
+          <small>Benchmark Registry — Registry records are provided for reference purposes.</small>
+        </div>
       </footer>
     </main>
   </body>

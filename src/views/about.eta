@@ -1,0 +1,23 @@
+<% layout('layout.eta') %>
+<article class="documentation">
+  <h1>About Benchmark Registry</h1>
+  <p>Benchmark Registry is an independently maintained public database of artificial intelligence benchmark results reported by identified sources. It is designed for researchers, engineers, journalists, evaluators, model providers, and readers who need stable references to individual reported measurements.</p>
+
+  <h2>Mission</h2>
+  <p>The registry preserves reported benchmark results together with the model, benchmark version or variant, metric, primary source, known evaluation context, and a stable public identifier. Its purpose is archival and informational: it makes reported results easier to find, inspect, cite, and correct.</p>
+
+  <h2>What the registry does not claim</h2>
+  <p>Benchmark Registry does not create a universal model score, rank models, or assume that results sharing a benchmark name are directly comparable. Inclusion does not constitute endorsement or independent verification unless a record explicitly states that an evaluation was independently reproduced.</p>
+
+  <h2>Ownership and operation</h2>
+  <p>Benchmark Registry is a public project operated through <a href="https://www.benchmarkregistry.org/">benchmarkregistry.org</a>. The project source is available in the <a href="https://github.com/rolling7ho/benchmark-registry">public GitHub repository</a>. The production service is hosted on Vercel and uses a managed PostgreSQL database.</p>
+
+  <h2>Sources and evidence</h2>
+  <p>Every benchmark record requires exactly one primary source. Supporting, correction, and archive sources may be attached separately. Record pages expose their source and provenance so readers can review the evidence and known context directly.</p>
+
+  <h2>Corrections</h2>
+  <p>To report an incorrect record, missing result, or source issue, use the <a href="/feedback">feedback and corrections form</a>. Include the stable Benchmark Record Identifier and a supporting source when possible. Published identifiers remain reserved when records are corrected, withdrawn, superseded, or archived.</p>
+
+  <h2>Further information</h2>
+  <p>Read the <a href="/methodology">registry methodology</a> for the creation and review process, or consult the <a href="/docs">registry documentation</a> for identifiers, search behavior, record fields, and comparability guidance.</p>
+</article>

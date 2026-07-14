@@ -47,6 +47,28 @@ export async function listModelSitemapEntries(
   }));
 }
 
+export async function listOrganizationSitemapEntries(
+  db: Database,
+): Promise<SitemapEntry[]> {
+  const rows = await db
+    .selectFrom('organizations')
+    .leftJoin('models', 'models.organization_id', 'organizations.id')
+    .leftJoin('benchmark_records', 'benchmark_records.model_id', 'models.id')
+    .select(['organizations.slug'])
+    .select(
+      sql<Date>`greatest(organizations.updated_at, coalesce(max(models.updated_at), organizations.updated_at), coalesce(max(benchmark_records.updated_at), organizations.updated_at))`.as(
+        'lastModified',
+      ),
+    )
+    .groupBy('organizations.id')
+    .orderBy('organizations.slug')
+    .execute();
+  return rows.map((row) => ({
+    path: `/organizations/${encodeURIComponent(row.slug)}`,
+    lastModified: asDate(row.lastModified),
+  }));
+}
+
 export async function listBenchmarkSitemapEntries(
   db: Database,
 ): Promise<SitemapEntry[]> {

@@ -86,6 +86,34 @@ nav span {
   color: #777;
   padding: 0 4px;
 }
+.breadcrumbs {
+  border: 0;
+  margin: 8px 0 0;
+  padding: 0;
+  color: #555;
+  font-size: 11px;
+}
+.breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.breadcrumbs li:not(:last-child)::after {
+  content: '›';
+  padding-left: 5px;
+  color: #777;
+}
+.breadcrumbs span {
+  padding: 0;
+}
+.page-summary {
+  max-width: 900px;
+  margin: 5px 0 9px;
+  line-height: 1.4;
+}
 .search-form {
   display: flex;
   align-items: center;
@@ -362,6 +390,9 @@ pre {
 }
 .documentation section {
   scroll-margin-top: 10px;
+}
+.homepage-information {
+  margin-top: 18px;
 }
 .documentation dd {
   margin-bottom: 8px;

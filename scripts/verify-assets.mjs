@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { access, readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
@@ -49,6 +50,32 @@ const generatedScriptFile = path.join(
 await access(generatedFile);
 await access(generatedFaviconFile);
 await access(generatedScriptFile);
+const stableFaviconFile = path.join(outputDirectory, 'public', 'favicon.png');
+const stableFavicon = await readFile(stableFaviconFile);
+if (
+  stableFavicon
+    .subarray(0, 8)
+    .compare(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) !== 0 ||
+  stableFavicon.readUInt32BE(16) !== 96 ||
+  stableFavicon.readUInt32BE(20) !== 96
+) {
+  throw new Error('The stable favicon must be a 96x96 PNG.');
+}
+for (const [name, width, height] of [
+  ['logo.png', 512, 512],
+  ['social-card.png', 1200, 630],
+]) {
+  const image = await readFile(path.join(outputDirectory, 'public', name));
+  if (
+    image
+      .subarray(0, 8)
+      .compare(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) !== 0 ||
+    image.readUInt32BE(16) !== width ||
+    image.readUInt32BE(20) !== height
+  ) {
+    throw new Error(`${name} must be a ${width}x${height} PNG.`);
+  }
+}
 await access(path.join(outputDirectory, 'views', 'layout.eta'));
 
 const [sourceSize, generatedSize, sourceScriptSize, generatedScriptSize] =

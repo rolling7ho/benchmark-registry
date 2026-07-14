@@ -25,6 +25,7 @@ import {
 import type { RequestRateLimiter } from '../security/request-rate-limit.js';
 import { hasSameOrigin } from '../web/same-origin.js';
 import { createPageSeo } from '../web/seo.js';
+import type { SeoRoutePolicy } from '../web/seo.js';
 
 interface FeedbackRouteOptions {
   store: FeedbackStore | undefined;
@@ -79,6 +80,7 @@ function renderFeedbackForm(
     submitted: boolean;
     error: boolean;
     submissionToken: string;
+    policy?: SeoRoutePolicy;
   },
 ): FastifyReply {
   return reply.view('feedback.eta', {
@@ -87,6 +89,9 @@ function renderFeedbackForm(
       title: 'Feedback and Corrections | Benchmark Registry',
       description: FEEDBACK_DESCRIPTION,
       path: '/feedback',
+      policy:
+        input.policy ??
+        (input.error || input.submitted ? 'NON_INDEXABLE' : 'INDEXABLE'),
     }),
     query: '',
     ...input,
@@ -156,6 +161,8 @@ const feedbackRoutes: FastifyPluginCallback<FeedbackRouteOptions> = (
       submitted: request.query.submitted === '1',
       error: false,
       submissionToken: randomUUID(),
+      policy:
+        Object.keys(request.query).length === 0 ? 'INDEXABLE' : 'NON_INDEXABLE',
     }),
   );
 
@@ -243,7 +250,7 @@ const feedbackRoutes: FastifyPluginCallback<FeedbackRouteOptions> = (
         seo: createPageSeo({
           title: 'Feedback | Benchmark Registry Administration',
           description: 'Administrator feedback review queue.',
-          index: false,
+          policy: 'NON_INDEXABLE',
         }),
         query: '',
         submissions,
@@ -279,7 +286,7 @@ const feedbackRoutes: FastifyPluginCallback<FeedbackRouteOptions> = (
         seo: createPageSeo({
           title: 'Feedback submission | Benchmark Registry Administration',
           description: 'Administrator feedback submission review.',
-          index: false,
+          policy: 'NON_INDEXABLE',
         }),
         query: '',
         submission,

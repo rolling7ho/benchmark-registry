@@ -1,26 +1,24 @@
 <p class="table-scroll-notice">Table may be scrolled horizontally on narrow displays.</p>
-<div class="table-scroll" tabindex="0" aria-label="Benchmark registry records table">
+<div class="table-scroll" tabindex="0" aria-label="Benchmark registry records table" data-nosnippet>
   <table class="registry-table">
     <thead>
       <tr>
-        <% if (it.showRank) { %><th>Rank</th><% } %>
-        <th><% if (it.sortUrls) { %><a class="sort-link" href="<%= it.sortUrls.record %>">Record No.<% if (it.sort === 'record') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Record No.<% } %></th>
-        <th><% if (it.sortUrls) { %><a class="sort-link" href="<%= it.sortUrls.model %>">Model<% if (it.sort === 'model') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Model<% } %></th>
-        <th><% if (it.sortUrls) { %><a class="sort-link" href="<%= it.sortUrls.benchmark %>">Benchmark<% if (it.sort === 'benchmark') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Benchmark<% } %></th>
-        <th><% if (it.sortUrls) { %><a class="sort-link" href="<%= it.sortUrls.metric %>">Metric<% if (it.sort === 'metric') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Metric<% } %></th>
-        <th><% if (it.sortUrls) { %><a class="sort-link" href="<%= it.sortUrls.score %>">Score<% if (it.sort === 'score') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Score<% } %></th>
-        <th><% if (it.sortUrls) { %><a class="sort-link" href="<%= it.sortUrls['evaluation-date'] %>">Eval Date<% if (it.sort === 'evaluation-date') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Eval Date<% } %></th>
+        <th><% if (it.sortUrls) { %><a class="sort-link" rel="nofollow" href="<%= it.sortUrls.record %>">Record No.<% if (it.sort === 'record') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Record No.<% } %></th>
+        <th><% if (it.sortUrls) { %><a class="sort-link" rel="nofollow" href="<%= it.sortUrls.model %>">Model<% if (it.sort === 'model') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Model<% } %></th>
+        <th><% if (it.sortUrls) { %><a class="sort-link" rel="nofollow" href="<%= it.sortUrls.benchmark %>">Benchmark<% if (it.sort === 'benchmark') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Benchmark<% } %></th>
+        <th><% if (it.sortUrls) { %><a class="sort-link" rel="nofollow" href="<%= it.sortUrls.metric %>">Metric<% if (it.sort === 'metric') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Metric<% } %></th>
+        <th><% if (it.sortUrls) { %><a class="sort-link" rel="nofollow" href="<%= it.sortUrls.score %>">Score<% if (it.sort === 'score') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Score<% } %></th>
+        <th><% if (it.sortUrls) { %><a class="sort-link" rel="nofollow" href="<%= it.sortUrls['evaluation-date'] %>">Eval Date<% if (it.sort === 'evaluation-date') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Eval Date<% } %></th>
         <th>Source</th>
-        <th><% if (it.sortUrls) { %><a class="sort-link" href="<%= it.sortUrls['model-id'] %>">Model ID<% if (it.sort === 'model-id') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Model ID<% } %></th>
+        <th><% if (it.sortUrls) { %><a class="sort-link" rel="nofollow" href="<%= it.sortUrls['model-id'] %>">Model ID<% if (it.sort === 'model-id') { %> <span aria-hidden="true"><%= it.order === 'asc' ? '▲' : '▼' %></span><% } %></a><% } else { %>Model ID<% } %></th>
       </tr>
     </thead>
     <tbody>
       <% if (it.records.length === 0) { %>
-        <tr><td colspan="<%= it.showRank ? 9 : 8 %>" class="empty-state"><strong><%= it.emptyMessage %></strong><% if (it.emptyDescription) { %><span><%= it.emptyDescription %></span><% } %><% if (it.emptyAction) { %><a href="<%= it.emptyAction.url %>"><%= it.emptyAction.label %></a><% } %></td></tr>
+        <tr><td colspan="8" class="empty-state"><strong><%= it.emptyMessage %></strong><% if (it.emptyDescription) { %><span><%= it.emptyDescription %></span><% } %><% if (it.emptyAction) { %><a href="<%= it.emptyAction.url %>"><%= it.emptyAction.label %></a><% } %></td></tr>
       <% } %>
       <% it.records.forEach(function(record) { %>
         <tr>
-          <% if (it.showRank) { %><td><%= record.rank %></td><% } %>
           <td><a href="/records/<%= encodeURIComponent(record.recordId) %>"><code class="identifier"><%= record.recordId %></code></a> <button class="compact-action" type="button" data-copy-value="<%= record.recordId %>" data-default-label="Copy ID" aria-label="Copy record identifier <%= record.recordId %>">Copy ID</button></td>
           <td><a href="/models/<%= encodeURIComponent(record.modelSlug) %>"><%= record.modelName %></a></td>
           <td><a href="/benchmarks/<%= encodeURIComponent(record.benchmarkSlug) %>"><%= record.benchmarkName %></a></td>

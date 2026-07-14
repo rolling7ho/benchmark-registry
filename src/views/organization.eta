@@ -1,2 +1,13 @@
-<% layout('layout.eta') %><h1><%= it.organization.name %></h1><dl class="record-metadata"><dt>Provider prefix</dt><dd><code><%= it.organization.providerPrefix %></code></dd><dt>Benchmark Record namespace</dt><dd><code><%= it.organization.brNamespace %></code></dd></dl>
-<%~ include('partials/registry-table.eta', { records: it.records, emptyMessage: it.emptyMessage }) %><%~ include('partials/pagination.eta', it.pagination) %>
+<% layout('layout.eta') %>
+<%~ include('partials/breadcrumbs.eta', { items: it.breadcrumbs }) %>
+<h1><%= it.organization.name %></h1>
+<p class="page-summary"><%= it.description %></p>
+<dl class="record-metadata"><dt>Provider prefix</dt><dd><code><%= it.organization.providerPrefix %></code></dd><dt>Benchmark Record namespace</dt><dd><code><%= it.organization.brNamespace %></code></dd><dt>Canonical models</dt><dd><%= it.organization.models.length %></dd><dt>Records</dt><dd><%= it.organization.recordCount %></dd></dl>
+<h2>Models</h2>
+<div class="table-scroll" tabindex="0" aria-label="Organization models table"><table class="browse-table"><thead><tr><th>Model</th><th>Model ID</th><th>Status</th></tr></thead><tbody>
+<% if (it.organization.models.length === 0) { %><tr><td colspan="3" class="empty-state">No canonical models are currently associated with this organization.</td></tr><% } %>
+<% it.organization.models.forEach(function(model) { %><tr><td><a href="/models/<%= encodeURIComponent(model.slug) %>"><%= model.officialName %></a></td><td><a href="/models/<%= encodeURIComponent(model.slug) %>"><code><%= model.modelId %></code></a></td><td><%= model.status %></td></tr><% }) %>
+</tbody></table></div>
+<h2>Reported benchmark records</h2>
+<%~ include('partials/registry-table.eta', { records: it.records, emptyMessage: it.emptyMessage }) %>
+<%~ include('partials/pagination.eta', it.pagination) %>

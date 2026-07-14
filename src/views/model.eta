@@ -1,6 +1,8 @@
 <% layout('layout.eta') %>
+<%~ include('partials/breadcrumbs.eta', { items: it.breadcrumbs }) %>
 <h1><%= it.model.officialName %></h1>
+<p class="page-summary"><%= it.description %></p>
 <p>MODEL RECORD: <code><%= it.model.modelId %></code></p>
-<dl class="record-metadata"><dt>Organization</dt><dd><%= it.model.organizationName %></dd><dt>Family</dt><dd><%= it.model.family ?? 'Unknown' %></dd><dt>Model number</dt><dd><%= it.model.modelNumber ?? 'Unknown' %></dd><dt>Tier</dt><dd><%= it.model.tierCode ?? 'Unknown' %></dd><dt>Status</dt><dd><%= it.model.status %></dd><dt>Release date</dt><dd><%= it.model.releaseDate ?? 'Unknown' %></dd></dl>
+<dl class="record-metadata"><dt>Organization</dt><dd><a href="/organizations/<%= encodeURIComponent(it.model.organizationSlug) %>"><%= it.model.organizationName %></a></dd><dt>Family</dt><dd><%= it.model.family ?? 'Unknown' %></dd><dt>Model number</dt><dd><%= it.model.modelNumber ?? 'Unknown' %></dd><dt>Tier</dt><dd><%= it.model.tierCode ?? 'Unknown' %></dd><dt>Status</dt><dd><%= it.model.status %></dd><dt>Release date</dt><dd><%= it.model.releaseDate ?? 'Unknown' %></dd></dl>
 <%~ include('partials/registry-table.eta', { records: it.records, emptyMessage: it.emptyMessage }) %>
 <%~ include('partials/pagination.eta', it.pagination) %>

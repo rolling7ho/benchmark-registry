@@ -79,17 +79,28 @@ export async function resolveSearch(
       FROM models
       WHERE lower(models.official_name) = ${normalizedQuery}
 
+      -- Priority 40 combines every separator/case-insensitive identity form
+      -- (curated aliases and the model's own id/name) into one group so a
+      -- genuine conflict between them is caught as ambiguous rather than one
+      -- form silently winning because it happened to be checked first.
       UNION ALL
       SELECT 40, 'ALIAS', model_aliases.model_id::text,
              model_aliases.alias, model_aliases.alias_type
       FROM model_aliases
       WHERE model_aliases.normalized_alias = ${normalizedQuery}
+         OR model_aliases.compact_alias = ${compactSearchText(query)}
 
       UNION ALL
-      SELECT 50, 'ALIAS', model_aliases.model_id::text,
-             model_aliases.alias, model_aliases.alias_type
-      FROM model_aliases
-      WHERE model_aliases.compact_alias = ${compactSearchText(query)}
+      SELECT 40, 'ALIAS', models.id::text, models.model_id, NULL::text
+      FROM models
+      WHERE regexp_replace(lower(models.model_id), '[\\s._-]', '', 'g')
+            = ${compactSearchText(query)}
+
+      UNION ALL
+      SELECT 40, 'ALIAS', models.id::text, models.official_name, NULL::text
+      FROM models
+      WHERE regexp_replace(lower(models.official_name), '[\\s._-]', '', 'g')
+            = ${compactSearchText(query)}
 
       UNION ALL
       SELECT 60, 'BENCHMARK_VERSION', benchmark_versions.id::text,

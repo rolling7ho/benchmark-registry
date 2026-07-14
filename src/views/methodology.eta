@@ -1,0 +1,35 @@
+<% layout('layout.eta') %>
+<article class="documentation">
+  <h1>Registry Methodology</h1>
+  <p>This page describes how Benchmark Registry represents reported artificial intelligence benchmark evaluations. It documents the registry process; it does not replace the methodology of any cited evaluation.</p>
+
+  <h2>Unit of record</h2>
+  <p>One Benchmark Record represents one reported metric result. The same source may therefore produce several records when it reports multiple metrics, benchmark versions, model snapshots, or materially different evaluation configurations.</p>
+
+  <h2>Source requirements</h2>
+  <p>Every new record requires exactly one primary source. Eligible sources include provider reports, technical reports, system cards, papers, model cards, official leaderboards, provider publications, and credible independent evaluations. Supporting, correction, and archived sources are stored separately from the primary source.</p>
+
+  <h2>Canonical resolution</h2>
+  <p>Administrative publication resolves models, benchmarks, versions, metrics, evaluators, and sources through exact canonical references. Public fuzzy or general search is not used to select administrative write targets, and publication does not automatically create missing canonical entities.</p>
+
+  <h2>Extraction and review</h2>
+  <p>Source-assisted extraction creates private ingestion candidates, not public records. Extracted data is treated as untrusted structured input and retains source evidence. A candidate never receives a public Benchmark Record Identifier until reviewed publication succeeds through the canonical record-creation service.</p>
+
+  <h2>Unknown metadata</h2>
+  <p>Unknown information remains unknown. A missing configuration does not mean that a provider default was used. A source publication date is not automatically treated as an evaluation date, and the existence of a dated model snapshot does not create a new canonical Model Identifier.</p>
+
+  <h2>Versions and evaluation context</h2>
+  <p>Benchmark versions or variants and materially different evaluation configurations are preserved when known. Configuration fingerprints are derived from canonical structured data and are never used to silently merge materially different settings.</p>
+
+  <h2>Identifiers and sequences</h2>
+  <p>Published Model Identifiers and Benchmark Record Identifiers are stable public references. New record sequences are allocated transactionally and are never reused. Identifier generation rules apply only when assigning new identifiers; reads never reconstruct or silently regenerate published identifiers.</p>
+
+  <h2>Provenance and corrections</h2>
+  <p>Record creation and status changes create provenance events. Corrections may add context or sources, or change a record status to withdrawn, superseded, erroneous, or archived. The public identifier remains reserved, and materially corrected results are represented without reassigning an existing identifier to a different evaluation.</p>
+
+  <h2>Comparability</h2>
+  <p>Comparability assessment is structural and conservative. Benchmark family, version or variant, metric, evaluation configuration, model snapshot, and evaluator may all affect whether records can be compared. Benchmark Registry does not use score superiority to rank models or declare one model better than another.</p>
+
+  <h2>Review and feedback</h2>
+  <p>Record pages expose the primary source, known context, and provenance. Readers should consult those fields before interpreting a result. Corrections can be submitted through the <a href="/feedback">feedback form</a>, and field definitions are available in the <a href="/docs#data-dictionary">data dictionary</a>.</p>
+</article>

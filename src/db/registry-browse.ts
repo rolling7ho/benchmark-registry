@@ -8,6 +8,7 @@ export interface PublicModel {
   modelId: string;
   officialName: string;
   organizationName: string;
+  organizationSlug: string;
   family: string | null;
   modelNumber: string | null;
   tierCode: string | null;
@@ -93,6 +94,12 @@ export interface PublicOrganization {
   providerPrefix: string;
   brNamespace: string;
   recordCount: number;
+  models: Array<{
+    slug: string;
+    modelId: string;
+    officialName: string;
+    status: RegistryStatus;
+  }>;
 }
 
 export interface PublicSource {
@@ -142,6 +149,7 @@ export async function listModels(db: Database): Promise<PublicModel[]> {
       'models.model_id as modelId',
       'models.official_name as officialName',
       'organizations.name as organizationName',
+      'organizations.slug as organizationSlug',
       'models.family as family',
       'models.model_number as modelNumber',
       'models.tier_code as tierCode',
@@ -167,6 +175,7 @@ export async function getModelBySlug(
     'models.model_id as modelId',
     'models.official_name as officialName',
     'organizations.name as organizationName',
+    'organizations.slug as organizationSlug',
     'models.family as family',
     'models.model_number as modelNumber',
     'models.tier_code as tierCode',
@@ -288,7 +297,11 @@ export async function listOrganizations(
     .groupBy('organizations.id')
     .orderBy('organizations.name', 'asc')
     .execute();
-  return rows.map((row) => ({ ...row, recordCount: Number(row.recordCount) }));
+  return rows.map((row) => ({
+    ...row,
+    recordCount: Number(row.recordCount),
+    models: [],
+  }));
 }
 
 export async function getOrganizationBySlug(
@@ -310,9 +323,26 @@ export async function getOrganizationBySlug(
     .where('organizations.slug', '=', slug.toLowerCase())
     .groupBy('organizations.id')
     .executeTakeFirst();
-  return row === undefined
-    ? undefined
-    : { ...row, recordCount: Number(row.recordCount) };
+  if (row === undefined) return undefined;
+  const models = await db
+    .selectFrom('models')
+    .select([
+      'models.model_id as modelId',
+      'models.official_name as officialName',
+      'models.status',
+    ])
+    .where('models.organization_id', '=', row.id)
+    .orderBy('models.official_name')
+    .orderBy('models.model_id')
+    .execute();
+  return {
+    ...row,
+    recordCount: Number(row.recordCount),
+    models: models.map((model) => ({
+      ...model,
+      slug: modelSlug(model.modelId),
+    })),
+  };
 }
 
 export async function listSources(db: Database): Promise<PublicSource[]> {

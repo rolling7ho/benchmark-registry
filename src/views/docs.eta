@@ -2,12 +2,34 @@
 <article class="documentation">
   <h1>Registry Documentation</h1>
   <nav class="contents" aria-label="Documentation sections">
-    <a href="#about">About</a> · <a href="#record-numbers">Record Numbers</a> · <a href="#model-ids">Model IDs</a> · <a href="#search">Search</a> · <a href="#benchmark-versions">Benchmark Versions</a> · <a href="#evaluation-context">Evaluation Context</a> · <a href="#model-snapshots">Model Snapshots</a> · <a href="#comparability">Comparing Records</a> · <a href="#sources">Sources</a> · <a href="#record-statuses">Record Statuses</a> · <a href="#identifier-stability">Identifier Stability</a> · <a href="#disclaimer">Disclaimer</a> · <a href="#contact-us">Contact Us</a>
+    <a href="#about">About</a> · <a href="#reading-records">Reading Records</a> · <a href="#data-dictionary">Data Dictionary</a> · <a href="#record-numbers">Record Numbers</a> · <a href="#model-ids">Model IDs</a> · <a href="#search">Search</a> · <a href="#benchmark-versions">Benchmark Versions</a> · <a href="#evaluation-context">Evaluation Context</a> · <a href="#model-snapshots">Model Snapshots</a> · <a href="#comparability">Comparing Records</a> · <a href="#sources">Sources</a> · <a href="#record-statuses">Record Statuses</a> · <a href="#identifier-stability">Identifier Stability</a> · <a href="#who-how-why">Who, How, and Why</a> · <a href="#disclaimer">Disclaimer</a> · <a href="#contact-us">Contact Us</a>
   </nav>
 
   <section id="about"><h2>About Benchmark Registry</h2>
     <p>Benchmark Registry is a public searchable database of artificial intelligence benchmark results. One benchmark record represents one reported metric result.</p>
     <p>The registry combines results reported in provider reports, technical reports, system cards, papers, leaderboards, model cards, provider publications, and credible independent evaluations.</p>
+  </section>
+
+  <section id="reading-records"><h2>How to Read a Benchmark Record</h2>
+    <p>Start with the model, benchmark version or variant, metric, and reported score. Then review the evaluation date, model snapshot, evaluator, and evaluation configuration before deciding whether another record is structurally comparable.</p>
+    <p>Open the primary source to verify how the publisher described the evaluation. A registry record preserves a reported result and its known context; it does not turn unlike benchmarks or metrics into a shared scale.</p>
+  </section>
+
+  <section id="data-dictionary"><h2>Data Dictionary</h2>
+    <dl>
+      <dt>Benchmark Record Identifier</dt><dd>The stable public reference for one reported metric result.</dd>
+      <dt>Model Identifier</dt><dd>The stable public reference for one canonical model, not for every dated snapshot.</dd>
+      <dt>Benchmark family</dt><dd>The recognized benchmark identity, separate from a version or variant.</dd>
+      <dt>Version or variant</dt><dd>The exact benchmark release, subset, or named variant when the source supports it.</dd>
+      <dt>Metric</dt><dd>The reported measurement name. Different metrics are stored as separate records.</dd>
+      <dt>Score</dt><dd>The value as reported by the primary source; it is not normalized across benchmarks.</dd>
+      <dt>Evaluation date</dt><dd>The date the evaluation occurred when known. It is never populated from the source publication date alone.</dd>
+      <dt>Reported date</dt><dd>The date the result was reported when known.</dd>
+      <dt>Model snapshot</dt><dd>A dated or provider-specific model reference associated with the canonical model when reported.</dd>
+      <dt>Evaluation configuration</dt><dd>Known settings such as shots, reasoning mode, sampling, harness, prompts, or scaffolding.</dd>
+      <dt>Primary source</dt><dd>The one required publication supporting creation of the record.</dd>
+      <dt>Provenance event</dt><dd>A public history entry for record creation, status changes, corrections, added sources, or contextual attribution.</dd>
+    </dl>
   </section>
 
   <section id="record-numbers"><h2>Understanding Record Numbers</h2>
@@ -74,6 +96,12 @@ BR  = Benchmark Record
 
   <section id="identifier-stability"><h2>Identifier Stability</h2>
     <p>Published Model Identifiers and Benchmark Record Identifiers are stored public references. Generation rules apply only when new identifiers are assigned. Existing identifiers are not recomputed when generation logic changes. Model renames do not automatically create a new identifier, and withdrawn identifiers are not reassigned.</p>
+  </section>
+
+  <section id="who-how-why"><h2>Who, How, and Why</h2>
+    <p><strong>Who:</strong> Benchmark Registry is an independently maintained public project. Ownership, scope, and correction information are documented on the <a href="/about">About page</a>.</p>
+    <p><strong>How:</strong> Records are created from reviewed, identified sources through canonical registry services. The <a href="/methodology">Methodology page</a> documents source, review, unknown-metadata, identifier, and provenance rules.</p>
+    <p><strong>Why:</strong> The registry exists to make individual reported benchmark measurements easier to find, inspect, cite, and correct without presenting them as universal model scores.</p>
   </section>
 
   <section id="disclaimer"><h2>Registry Disclaimer</h2>

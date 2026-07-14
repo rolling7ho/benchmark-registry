@@ -27,6 +27,7 @@ import {
   countRecordSitemapBatches,
   listBenchmarkSitemapEntries,
   listModelSitemapEntries,
+  listOrganizationSitemapEntries,
   listRecordSitemapEntries,
 } from '../db/sitemaps.js';
 import { PROVIDER_DOCUMENTATION } from '../identifiers/provider-documentation.js';
@@ -36,6 +37,7 @@ import {
   canonicalPagePath,
   createPageSeo,
   modelSlug,
+  type BreadcrumbItem,
 } from '../web/seo.js';
 import { renderSitemapIndex, renderUrlSet } from '../web/sitemap-xml.js';
 
@@ -79,10 +81,19 @@ const EMPTY_PAGE: RegistryRecordPage = {
   total: 0,
 };
 
-function parsePage(value: string | undefined): number {
-  if (value === undefined || !/^\d+$/.test(value)) return 1;
+function parsePage(value: string | undefined): number | null {
+  if (value === undefined) return 1;
+  if (!/^\d+$/.test(value)) return null;
   const page = Number(value);
-  return Number.isSafeInteger(page) && page > 0 ? page : 1;
+  return Number.isSafeInteger(page) && page > 0 ? page : null;
+}
+
+function hasUnexpectedQuery(
+  query: object,
+  allowed: readonly string[],
+): boolean {
+  const allowedNames = new Set(allowed);
+  return Object.keys(query).some((name) => !allowedNames.has(name));
 }
 
 function hasNonScalarQueryValue(value: unknown): boolean {
@@ -254,12 +265,26 @@ function renderError(
     seo: createPageSeo({
       title: `${statusCode} — Benchmark Registry`,
       description: message,
-      index: false,
+      policy: 'NON_INDEXABLE',
     }),
     statusCode,
     message,
     query: '',
   });
+}
+
+function pageIsUnavailable(
+  requestedPage: number,
+  result: RegistryRecordPage,
+): boolean {
+  return requestedPage > result.page;
+}
+
+function breadcrumb(
+  currentName: string,
+  ancestors: Array<{ name: string; path: string }>,
+): BreadcrumbItem[] {
+  return [{ name: 'Registry', path: '/' }, ...ancestors, { name: currentName }];
 }
 
 async function registryPage(
@@ -286,6 +311,19 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
 
   app.get<{ Querystring: LeaderboardQuery }>('/', async (request, reply) => {
     if (
+      hasUnexpectedQuery(request.query, [
+        'page',
+        'model',
+        'benchmark',
+        'metric',
+        'sort',
+        'order',
+        'per-page',
+      ])
+    ) {
+      return renderError(reply, 404, 'Record or page not found');
+    }
+    if (
       Object.values(request.query).some((value) =>
         hasNonScalarQueryValue(value),
       )
@@ -293,6 +331,20 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
       return renderError(reply, 400, 'Query parameters must have one value.');
     }
     const page = parsePage(request.query.page);
+    if (page === null)
+      return renderError(reply, 404, 'Record or page not found');
+    if (
+      (request.query.sort !== undefined &&
+        !REGISTRY_SORTS.has(request.query.sort as RegistrySort)) ||
+      (request.query.order !== undefined &&
+        !['asc', 'desc'].includes(request.query.order)) ||
+      (request.query['per-page'] !== undefined &&
+        !RECORDS_PER_PAGE_OPTIONS.some(
+          (option) => option.value === request.query['per-page'],
+        ))
+    ) {
+      return renderError(reply, 404, 'Record or page not found');
+    }
     const selectedModelSlug = request.query.model?.trim().toLowerCase() || null;
     const benchmarkSlug = request.query.benchmark?.trim().toLowerCase() || null;
     const metricSlug = request.query.metric?.trim().toLowerCase() || null;
@@ -329,6 +381,20 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
           })
         : getLeaderboardOptions(database),
     ]);
+    if (
+      pageIsUnavailable(page, result) ||
+      (database !== undefined &&
+        ((selectedModelSlug !== null &&
+          !options.models.some((item) => item.value === selectedModelSlug)) ||
+          (benchmarkSlug !== null &&
+            !options.benchmarks.some((item) => item.value === benchmarkSlug)) ||
+          (metricSlug !== null &&
+            !options.metrics.some((item) => item.value === metricSlug))))
+    ) {
+      return renderError(reply, 404, 'Record or page not found');
+    }
+    const parameterVariant = Object.keys(request.query).length > 0;
+    const updateInstant = databaseUpdateInstant(update);
     return reply.view('registry-page.eta', {
       title: 'Benchmark Registry',
       seo: createPageSeo({
@@ -336,13 +402,16 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         description:
           'Public registry of reported artificial intelligence benchmark evaluations, scores, sources, model identifiers, and evaluation context.',
         path: '/',
+        policy: parameterVariant ? 'NON_INDEXABLE' : 'INDEXABLE',
         includeSiteIdentity: true,
+        datasetModified: updateInstant,
       }),
       query: '',
       recordCountLabel: formatRecordCount(options.recordCount),
-      heading: null,
+      heading: 'Artificial Intelligence Benchmark Registry',
       databaseUpdate: formatDatabaseUpdate(update),
-      databaseUpdateInstant: databaseUpdateInstant(update),
+      databaseUpdateInstant: updateInstant,
+      recordActions: true,
       records: result.records,
       emptyMessage:
         selectedModelSlug !== null ||
@@ -395,6 +464,8 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
   });
 
   app.get<{ Querystring: SearchQuery }>('/search', async (request, reply) => {
+    if (hasUnexpectedQuery(request.query, ['q', 'page']))
+      return renderError(reply, 404, 'Record or page not found');
     if (
       hasNonScalarQueryValue(request.query.q) ||
       hasNonScalarQueryValue(request.query.page)
@@ -410,7 +481,10 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
       );
     }
     const page = parsePage(request.query.page);
+    if (page === null)
+      return renderError(reply, 404, 'Record or page not found');
     if (database === undefined) {
+      if (page > 1) return renderError(reply, 404, 'Record or page not found');
       const displayQuery = rawQuery.trim();
       return reply.view('registry-page.eta', {
         title: 'Search — Benchmark Registry',
@@ -419,11 +493,13 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
           description:
             'Search Benchmark Registry by exact record identifier, model identifier, model name, benchmark, organization, or metric.',
           path: '/search',
-          index: false,
+          policy: 'NON_INDEXABLE',
         }),
         query: displayQuery,
         heading: `Search results for “${displayQuery}”`,
         databaseUpdate: null,
+        databaseUpdateInstant: null,
+        recordActions: true,
         records: [],
         emptyMessage: `No records found for “${displayQuery}”.`,
         emptyDescription:
@@ -482,6 +558,8 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
       resolution.kind === 'EMPTY'
         ? { ...EMPTY_PAGE, page }
         : await getRegistryRecords(database, filter, page);
+    if (pageIsUnavailable(page, result))
+      return renderError(reply, 404, 'Record or page not found');
     const statusNotice =
       resolution.kind === 'EXACT_RECORD' &&
       result.records[0] !== undefined &&
@@ -494,11 +572,13 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         title: `Search results for “${resolution.displayQuery}” | Benchmark Registry`,
         description: `Benchmark Registry search results for “${resolution.displayQuery}”.`,
         path: '/search',
-        index: false,
+        policy: 'NON_INDEXABLE',
       }),
       query: resolution.displayQuery,
       heading: `Search results for “${resolution.displayQuery}”`,
       databaseUpdate: null,
+      databaseUpdateInstant: null,
+      recordActions: true,
       records: result.records,
       emptyMessage: `No records found for “${resolution.displayQuery}”.`,
       emptyDescription:
@@ -512,7 +592,7 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
     });
   });
 
-  app.get('/models', async (_request, reply) =>
+  app.get('/models', async (request, reply) =>
     reply.view('models.eta', {
       title: 'Models — Benchmark Registry',
       seo: createPageSeo({
@@ -520,69 +600,94 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         description:
           'Browse canonical AI models with stable Model Identifiers and links to their reported benchmark records.',
         path: '/models',
+        policy:
+          Object.keys(request.query as object).length === 0
+            ? 'INDEXABLE'
+            : 'NON_INDEXABLE',
       }),
       query: '',
       models: database === undefined ? [] : await listModels(database),
     }),
   );
 
-  app.get<{ Params: { recordId: string } }>(
-    '/records/:recordId',
-    async (request, reply) => {
-      if (database === undefined)
-        return renderError(reply, 404, 'Record or page not found');
-      const record = await getPublicRecordDetail(
-        database,
-        request.params.recordId,
-      );
-      if (record === undefined)
-        return renderError(reply, 404, 'Record or page not found');
-      if (request.params.recordId !== record.recordId) {
-        return reply
-          .code(308)
-          .header('Location', `/records/${encodeURIComponent(record.recordId)}`)
-          .send();
-      }
-      const eventLabels: Record<string, string> = {
-        CREATED_MANUALLY: 'Record created manually',
-        CREATED_FROM_INGESTION:
-          'Record created through reviewed source ingestion',
-        WITHDRAWN: 'Record withdrawn',
-        SUPERSEDED: 'Record superseded',
-        CORRECTION_NOTED: 'Correction noted',
-        SOURCE_ADDED: 'Source added',
-        CONFIGURATION_ATTRIBUTED: 'Evaluation configuration attributed',
-        SNAPSHOT_ATTRIBUTED: 'Model snapshot attributed',
-      };
-      return reply.view('record.eta', {
-        title: `${record.recordId} — Benchmark Registry`,
-        seo: createPageSeo({
-          title: `${record.modelName} on ${record.benchmarkDisplay}: ${record.scoreDisplay} ${record.metricName} | Benchmark Registry`,
-          description: `Reported ${record.metricName} result of ${record.scoreDisplay} for ${record.modelName} on ${record.benchmarkDisplay}. Benchmark Registry record ${record.recordId}.`,
-          path: `/records/${encodeURIComponent(record.recordId)}`,
-        }),
-        query: '',
-        record: {
-          ...record,
-          canonicalUrl: `${CANONICAL_ORIGIN}/records/${encodeURIComponent(record.recordId)}`,
-          correctionUrl: `/feedback?record=${encodeURIComponent(record.recordId)}&type=incorrect-record`,
-          modelSlug: modelSlug(record.modelIdentifier),
-          additionalConfigurationDisplay:
-            Object.keys(record.additionalConfiguration).length === 0
-              ? 'None reported'
-              : formatStructuredValue(record.additionalConfiguration),
-          provenance: record.provenance.map((event) => ({
-            ...event,
-            label: eventLabels[event.eventType] ?? event.eventType,
-          })),
-        },
-      });
-    },
-  );
+  app.get<{
+    Params: { recordId: string };
+    Querystring: Record<string, unknown>;
+  }>('/records/:recordId', async (request, reply) => {
+    if (database === undefined)
+      return renderError(reply, 404, 'Record or page not found');
+    const record = await getPublicRecordDetail(
+      database,
+      request.params.recordId,
+    );
+    if (record === undefined)
+      return renderError(reply, 404, 'Record or page not found');
+    if (request.params.recordId !== record.recordId) {
+      return reply
+        .code(308)
+        .header('Location', `/records/${encodeURIComponent(record.recordId)}`)
+        .send();
+    }
+    const eventLabels: Record<string, string> = {
+      CREATED_MANUALLY: 'Record created manually',
+      CREATED_FROM_INGESTION:
+        'Record created through reviewed source ingestion',
+      WITHDRAWN: 'Record withdrawn',
+      SUPERSEDED: 'Record superseded',
+      CORRECTION_NOTED: 'Correction noted',
+      SOURCE_ADDED: 'Source added',
+      CONFIGURATION_ATTRIBUTED: 'Evaluation configuration attributed',
+      SNAPSHOT_ATTRIBUTED: 'Model snapshot attributed',
+    };
+    const recordPath = `/records/${encodeURIComponent(record.recordId)}`;
+    const breadcrumbs = breadcrumb(record.recordId, [
+      { name: 'Models', path: '/models' },
+      {
+        name: record.modelName,
+        path: `/models/${encodeURIComponent(modelSlug(record.modelIdentifier))}`,
+      },
+    ]);
+    const description = `Reported ${record.metricName} result of ${record.scoreDisplay} for ${record.modelName} on ${record.benchmarkDisplay}. Benchmark Registry record ${record.recordId}.`;
+    return reply.view('record.eta', {
+      title: `${record.recordId} — Benchmark Registry`,
+      seo: createPageSeo({
+        title: `${record.modelName} on ${record.benchmarkDisplay}: ${record.scoreDisplay} ${record.metricName} | Benchmark Registry`,
+        description,
+        path: recordPath,
+        policy:
+          Object.keys(request.query).length === 0
+            ? 'INDEXABLE'
+            : 'NON_INDEXABLE',
+        breadcrumbs,
+      }),
+      query: '',
+      description,
+      breadcrumbs,
+      recordActions: true,
+      record: {
+        ...record,
+        canonicalUrl: `${CANONICAL_ORIGIN}${recordPath}`,
+        correctionUrl: `/feedback?record=${encodeURIComponent(record.recordId)}&type=incorrect-record`,
+        modelSlug: modelSlug(record.modelIdentifier),
+        additionalConfigurationDisplay:
+          Object.keys(record.additionalConfiguration).length === 0
+            ? 'None reported'
+            : formatStructuredValue(record.additionalConfiguration),
+        provenance: record.provenance.map((event) => ({
+          ...event,
+          label: eventLabels[event.eventType] ?? event.eventType,
+        })),
+      },
+    });
+  });
 
   app.get<{ Params: { slug: string }; Querystring: PageQuery }>(
     '/models/:slug',
     async (request, reply) => {
+      if (hasUnexpectedQuery(request.query, ['page']))
+        return renderError(reply, 404, 'Record or page not found');
+      if (hasNonScalarQueryValue(request.query.page))
+        return renderError(reply, 400, 'Query parameters must have one value.');
       if (database === undefined)
         return renderError(reply, 404, 'Record or page not found');
       const model = await getModelBySlug(database, request.params.slug);
@@ -595,23 +700,38 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
           .send();
       }
       const page = parsePage(request.query.page);
+      if (page === null)
+        return renderError(reply, 404, 'Record or page not found');
       const result = await getRegistryRecords(
         database,
         { kind: 'MODEL', modelInternalId: model.id },
         page,
       );
+      if (pageIsUnavailable(page, result))
+        return renderError(reply, 404, 'Record or page not found');
+      const description =
+        result.total === 0
+          ? `Canonical registry entry for ${model.officialName} by ${model.organizationName}. Model ID: ${model.modelId}. No reported benchmark evaluation records are currently associated with this model.`
+          : `Browse ${formatRecordCount(result.total)} for ${model.officialName} by ${model.organizationName}. Review reported scores, metrics, primary sources, and evaluation dates. Model ID: ${model.modelId}.`;
+      const breadcrumbs = breadcrumb(model.officialName, [
+        { name: 'Models', path: '/models' },
+      ]);
       return reply.view('model.eta', {
         title: `${model.officialName} — Benchmark Registry`,
         seo: createPageSeo({
           title: `${model.officialName} Benchmark Results & Scores | Benchmark Registry`,
-          description: `${model.officialName} benchmark results and reported scores in Benchmark Registry. Model Identifier ${model.modelId}; ${result.total} associated benchmark records.`,
+          description,
           path: canonicalPagePath(
             `/models/${encodeURIComponent(model.slug)}`,
             result.page,
           ),
+          breadcrumbs,
         }),
         query: '',
         model,
+        description,
+        breadcrumbs,
+        recordActions: true,
         records: result.records,
         emptyMessage:
           'No benchmark records are currently associated with this model.',
@@ -623,7 +743,7 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
     },
   );
 
-  app.get('/benchmarks', async (_request, reply) =>
+  app.get('/benchmarks', async (request, reply) =>
     reply.view('benchmarks.eta', {
       title: 'Benchmarks — Benchmark Registry',
       seo: createPageSeo({
@@ -631,6 +751,10 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         description:
           'Browse canonical AI benchmarks, versions, variants, and their associated reported evaluation records.',
         path: '/benchmarks',
+        policy:
+          Object.keys(request.query as object).length === 0
+            ? 'INDEXABLE'
+            : 'NON_INDEXABLE',
       }),
       query: '',
       benchmarks: database === undefined ? [] : await listBenchmarks(database),
@@ -640,6 +764,10 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
   app.get<{ Params: { slug: string }; Querystring: PageQuery }>(
     '/benchmarks/:slug',
     async (request, reply) => {
+      if (hasUnexpectedQuery(request.query, ['page']))
+        return renderError(reply, 404, 'Record or page not found');
+      if (hasNonScalarQueryValue(request.query.page))
+        return renderError(reply, 400, 'Query parameters must have one value.');
       if (database === undefined)
         return renderError(reply, 404, 'Record or page not found');
       const benchmark = await getBenchmarkBySlug(database, request.params.slug);
@@ -655,23 +783,35 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
           .send();
       }
       const page = parsePage(request.query.page);
+      if (page === null)
+        return renderError(reply, 404, 'Record or page not found');
       const result = await getRegistryRecords(
         database,
         { kind: 'BENCHMARK', benchmarkInternalId: benchmark.id },
         page,
       );
+      if (pageIsUnavailable(page, result))
+        return renderError(reply, 404, 'Record or page not found');
+      const description = `${benchmark.name} reported AI benchmark results in Benchmark Registry, with ${result.total} associated records across canonical models.`;
+      const breadcrumbs = breadcrumb(benchmark.name, [
+        { name: 'Benchmarks', path: '/benchmarks' },
+      ]);
       return reply.view('benchmark.eta', {
         title: `${benchmark.name} — Benchmark Registry`,
         seo: createPageSeo({
           title: `${benchmark.name} AI Benchmark Results | Benchmark Registry`,
-          description: `${benchmark.name} reported AI benchmark results in Benchmark Registry, with ${result.total} associated records across canonical models.`,
+          description,
           path: canonicalPagePath(
             `/benchmarks/${encodeURIComponent(benchmark.slug)}`,
             result.page,
           ),
+          breadcrumbs,
         }),
         query: '',
         benchmark,
+        description,
+        breadcrumbs,
+        recordActions: true,
         records: result.records,
         emptyMessage:
           'No benchmark records are currently associated with this benchmark.',
@@ -687,6 +827,10 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
     Params: { slug: string; version: string };
     Querystring: PageQuery;
   }>('/benchmarks/:slug/versions/:version', async (request, reply) => {
+    if (hasUnexpectedQuery(request.query, ['page']))
+      return renderError(reply, 404, 'Record or page not found');
+    if (hasNonScalarQueryValue(request.query.page))
+      return renderError(reply, 400, 'Query parameters must have one value.');
     if (database === undefined)
       return renderError(reply, 404, 'Record or page not found');
     const reference =
@@ -709,21 +853,39 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
       return reply.code(308).header('Location', canonicalPath).send();
     }
     const page = parsePage(request.query.page);
+    if (page === null)
+      return renderError(reply, 404, 'Record or page not found');
     const result = await getRegistryRecords(
       database,
       { kind: 'BENCHMARK_VERSION', benchmarkVersionInternalId: version.id },
       page,
     );
+    if (pageIsUnavailable(page, result))
+      return renderError(reply, 404, 'Record or page not found');
+    const versionName =
+      version.variantName ?? version.versionLabel ?? 'Unspecified';
+    const description = `Reported ${benchmark.name} results for the ${versionName} version or variant in Benchmark Registry, with ${result.total} associated records.`;
+    const breadcrumbs = breadcrumb(versionName, [
+      { name: 'Benchmarks', path: '/benchmarks' },
+      {
+        name: benchmark.name,
+        path: `/benchmarks/${encodeURIComponent(benchmark.slug)}`,
+      },
+    ]);
     return reply.view('benchmark-version.eta', {
       title: `${benchmark.name} — Benchmark Registry`,
       seo: createPageSeo({
-        title: `${benchmark.name}: ${version.variantName ?? version.versionLabel ?? 'Unspecified'} Results | Benchmark Registry`,
-        description: `Reported ${benchmark.name} results for the ${version.variantName ?? version.versionLabel ?? 'unspecified'} version or variant in Benchmark Registry.`,
+        title: `${benchmark.name}: ${versionName} Results | Benchmark Registry`,
+        description,
         path: canonicalPagePath(canonicalPath, result.page),
+        breadcrumbs,
       }),
       query: '',
       benchmark,
       version,
+      description,
+      breadcrumbs,
+      recordActions: true,
       records: result.records,
       emptyMessage: 'No benchmark records are associated with this version.',
       pagination: pagination(
@@ -733,7 +895,7 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
     });
   });
 
-  app.get('/organizations', async (_request, reply) =>
+  app.get('/organizations', async (request, reply) =>
     reply.view('organizations.eta', {
       title: 'Organizations — Benchmark Registry',
       seo: createPageSeo({
@@ -741,6 +903,10 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         description:
           'Browse organizations represented in Benchmark Registry and their associated model benchmark records.',
         path: '/organizations',
+        policy:
+          Object.keys(request.query as object).length === 0
+            ? 'INDEXABLE'
+            : 'NON_INDEXABLE',
       }),
       query: '',
       organizations:
@@ -751,6 +917,10 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
   app.get<{ Params: { slug: string }; Querystring: PageQuery }>(
     '/organizations/:slug',
     async (request, reply) => {
+      if (hasUnexpectedQuery(request.query, ['page']))
+        return renderError(reply, 404, 'Record or page not found');
+      if (hasNonScalarQueryValue(request.query.page))
+        return renderError(reply, 400, 'Query parameters must have one value.');
       if (database === undefined)
         return renderError(reply, 404, 'Record or page not found');
       const organization = await getOrganizationBySlug(
@@ -769,23 +939,35 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
           .send();
       }
       const page = parsePage(request.query.page);
+      if (page === null)
+        return renderError(reply, 404, 'Record or page not found');
       const result = await getRegistryRecords(
         database,
         { kind: 'ORGANIZATION', organizationInternalId: organization.id },
         page,
       );
+      if (pageIsUnavailable(page, result))
+        return renderError(reply, 404, 'Record or page not found');
+      const description = `${organization.name} has ${organization.models.length.toLocaleString('en-US')} canonical ${organization.models.length === 1 ? 'model' : 'models'} and ${result.total.toLocaleString('en-US')} associated reported benchmark ${result.total === 1 ? 'record' : 'records'} in Benchmark Registry.`;
+      const breadcrumbs = breadcrumb(organization.name, [
+        { name: 'Organizations', path: '/organizations' },
+      ]);
       return reply.view('organization.eta', {
         title: `${organization.name} — Benchmark Registry`,
         seo: createPageSeo({
           title: `${organization.name} Models and Benchmark Records | Benchmark Registry`,
-          description: `${organization.name} models and ${result.total} associated reported benchmark records in Benchmark Registry.`,
+          description,
           path: canonicalPagePath(
             `/organizations/${encodeURIComponent(organization.slug)}`,
             result.page,
           ),
+          breadcrumbs,
         }),
         query: '',
         organization,
+        description,
+        breadcrumbs,
+        recordActions: true,
         records: result.records,
         emptyMessage:
           'No benchmark records are currently associated with this organization.',
@@ -798,8 +980,16 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
   );
 
   app.get<{ Querystring: PageQuery }>('/recent', async (request, reply) => {
+    if (hasUnexpectedQuery(request.query, ['page']))
+      return renderError(reply, 404, 'Record or page not found');
+    if (hasNonScalarQueryValue(request.query.page))
+      return renderError(reply, 400, 'Query parameters must have one value.');
     const page = parsePage(request.query.page);
+    if (page === null)
+      return renderError(reply, 404, 'Record or page not found');
     const result = await registryPage(database, { kind: 'RECENT' }, page);
+    if (pageIsUnavailable(page, result))
+      return renderError(reply, 404, 'Record or page not found');
     return reply.view('registry-page.eta', {
       title: 'Recent Records — Benchmark Registry',
       seo: createPageSeo({
@@ -811,6 +1001,8 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
       query: '',
       heading: 'Recent Records',
       databaseUpdate: null,
+      databaseUpdateInstant: null,
+      recordActions: true,
       records: result.records,
       emptyMessage: 'No benchmark records are currently available.',
       statusNotice: null,
@@ -818,7 +1010,7 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
     });
   });
 
-  app.get('/sources', async (_request, reply) =>
+  app.get('/sources', async (request, reply) =>
     reply.view('sources.eta', {
       title: 'Sources — Benchmark Registry',
       seo: createPageSeo({
@@ -826,13 +1018,17 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         description:
           'Primary, supporting, correction, and archive sources referenced by public Benchmark Registry records.',
         path: '/sources',
+        policy:
+          Object.keys(request.query as object).length === 0
+            ? 'INDEXABLE'
+            : 'NON_INDEXABLE',
       }),
       query: '',
       sources: database === undefined ? [] : await listSources(database),
     }),
   );
 
-  app.get('/docs', (_request, reply) =>
+  app.get('/docs', (request, reply) =>
     reply.view('docs.eta', {
       title: 'Registry Documentation — Benchmark Registry',
       seo: createPageSeo({
@@ -840,13 +1036,51 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         description:
           'Documentation for Benchmark Registry identifiers, search behavior, evaluation context, sources, statuses, and comparability.',
         path: '/docs',
+        policy:
+          Object.keys(request.query as object).length === 0
+            ? 'INDEXABLE'
+            : 'NON_INDEXABLE',
       }),
       query: '',
       providers: PROVIDER_DOCUMENTATION,
     }),
   );
 
-  app.get('/privacy', (_request, reply) =>
+  app.get('/about', (request, reply) =>
+    reply.view('about.eta', {
+      title: 'About Benchmark Registry',
+      seo: createPageSeo({
+        title: 'About Benchmark Registry | Public AI Benchmark Database',
+        description:
+          'Learn the mission, scope, ownership, sourcing principles, and correction process of Benchmark Registry.',
+        path: '/about',
+        policy:
+          Object.keys(request.query as object).length === 0
+            ? 'INDEXABLE'
+            : 'NON_INDEXABLE',
+      }),
+      query: '',
+    }),
+  );
+
+  app.get('/methodology', (request, reply) =>
+    reply.view('methodology.eta', {
+      title: 'Registry Methodology',
+      seo: createPageSeo({
+        title: 'Methodology | Benchmark Registry',
+        description:
+          'How Benchmark Registry selects sources, creates reported evaluation records, preserves unknown metadata, and records corrections and provenance.',
+        path: '/methodology',
+        policy:
+          Object.keys(request.query as object).length === 0
+            ? 'INDEXABLE'
+            : 'NON_INDEXABLE',
+      }),
+      query: '',
+    }),
+  );
+
+  app.get('/privacy', (request, reply) =>
     reply.view('privacy.eta', {
       title: 'Privacy Policy — Benchmark Registry',
       seo: createPageSeo({
@@ -854,12 +1088,16 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         description:
           'How Benchmark Registry processes technical visitor information, correspondence, and infrastructure data.',
         path: '/privacy',
+        policy:
+          Object.keys(request.query as object).length === 0
+            ? 'INDEXABLE'
+            : 'NON_INDEXABLE',
       }),
       query: '',
     }),
   );
 
-  app.get('/terms', (_request, reply) =>
+  app.get('/terms', (request, reply) =>
     reply.view('terms.eta', {
       title: 'Terms of Use — Benchmark Registry',
       seo: createPageSeo({
@@ -867,6 +1105,10 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
         description:
           'Terms governing use of Benchmark Registry and its archival records of publicly reported benchmark measurements.',
         path: '/terms',
+        policy:
+          Object.keys(request.query as object).length === 0
+            ? 'INDEXABLE'
+            : 'NON_INDEXABLE',
       }),
       query: '',
     }),
@@ -899,6 +1141,7 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
     const paths = [
       '/sitemaps/pages.xml',
       '/sitemaps/models.xml',
+      '/sitemaps/organizations.xml',
       '/sitemaps/benchmarks.xml',
       ...Array.from(
         { length: recordBatchCount },
@@ -923,6 +1166,8 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
             '/recent',
             '/sources',
             '/docs',
+            '/about',
+            '/methodology',
             '/privacy',
             '/terms',
             '/feedback',
@@ -937,6 +1182,18 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
       .send(
         renderUrlSet(
           database === undefined ? [] : await listModelSitemapEntries(database),
+        ),
+      ),
+  );
+
+  app.get('/sitemaps/organizations.xml', async (_request, reply) =>
+    reply
+      .type('application/xml; charset=utf-8')
+      .send(
+        renderUrlSet(
+          database === undefined
+            ? []
+            : await listOrganizationSitemapEntries(database),
         ),
       ),
   );

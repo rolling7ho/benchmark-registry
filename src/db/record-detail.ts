@@ -81,6 +81,7 @@ export async function getPublicRecordDetail(db: Database, identifier: string) {
       'models.model_number as modelNumber',
       'models.tier_code as modelTier',
       'organizations.name as modelOrganization',
+      'organizations.slug as modelOrganizationSlug',
       'model_snapshots.snapshot_reference as snapshotReference',
       'model_snapshots.snapshot_label as snapshotLabel',
       'model_snapshots.provider_model_identifier as providerModelIdentifier',
