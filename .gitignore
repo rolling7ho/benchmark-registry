@@ -6,8 +6,6 @@ coverage/
 .env.*
 !.env.example
 
-ROTATEWEEKLY.md
-
 *.log
 logs/
 
