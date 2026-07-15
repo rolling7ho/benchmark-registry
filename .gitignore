@@ -15,3 +15,7 @@ Thumbs.db
 .vscode/
 .claude/*.lock
 .remember/
+
+# Local registry population artifacts containing production-shaped records.
+/research/2026-benchmark-population/
+/docs/seo-baseline-2026-07-14.md
