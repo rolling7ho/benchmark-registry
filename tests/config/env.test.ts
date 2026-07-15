@@ -22,4 +22,14 @@ describe('production environment validation', () => {
     });
     expect(environment.FEEDBACK_RATE_LIMIT_SECRET).toHaveLength(32);
   });
+
+  it('trims a trailing newline pasted into ADMIN_USERNAME/ADMIN_PASSWORD', () => {
+    const environment = loadEnvironment({
+      DATABASE_URL,
+      ADMIN_USERNAME: 'registry-admin\n',
+      ADMIN_PASSWORD: 'a-long-test-password\n',
+    });
+    expect(environment.ADMIN_USERNAME).toBe('registry-admin');
+    expect(environment.ADMIN_PASSWORD).toBe('a-long-test-password');
+  });
 });
