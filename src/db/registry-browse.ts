@@ -1,5 +1,6 @@
 import type { RegistryStatus } from './constants.js';
 import type { Database } from './database.js';
+import { publicRecordCountExpression } from './public-record-visibility.js';
 import { modelSlug } from '../web/seo.js';
 
 export interface PublicModel {
@@ -57,7 +58,7 @@ async function versionsByBenchmark(
       'benchmark_versions.status',
       'benchmark_versions.release_date as releaseDate',
     ])
-    .select((eb) => eb.fn.count('benchmark_records.id').as('recordCount'))
+    .select(publicRecordCountExpression().as('recordCount'))
     .groupBy('benchmark_versions.id')
     .orderBy('benchmark_versions.canonical_reference');
   if (benchmarkId !== undefined) {
@@ -222,7 +223,7 @@ export async function listBenchmarks(db: Database): Promise<PublicBenchmark[]> {
         'benchmarks.organization_name as organizationName',
         'benchmarks.status as status',
       ])
-      .select((eb) => eb.fn.count('benchmark_records.id').as('recordCount'))
+      .select(publicRecordCountExpression().as('recordCount'))
       .groupBy('benchmarks.id')
       .orderBy('benchmarks.name', 'asc')
       .execute(),
@@ -254,7 +255,7 @@ export async function getBenchmarkBySlug(
       'benchmarks.organization_name as organizationName',
       'benchmarks.status as status',
     ])
-    .select((eb) => eb.fn.count('benchmark_records.id').as('recordCount'))
+    .select(publicRecordCountExpression().as('recordCount'))
     .where('benchmarks.slug', '=', slug.toLowerCase())
     .groupBy('benchmarks.id')
     .executeTakeFirst();
@@ -293,7 +294,7 @@ export async function listOrganizations(
       'organizations.provider_prefix as providerPrefix',
       'organizations.br_namespace as brNamespace',
     ])
-    .select((eb) => eb.fn.count('benchmark_records.id').as('recordCount'))
+    .select(publicRecordCountExpression().as('recordCount'))
     .groupBy('organizations.id')
     .orderBy('organizations.name', 'asc')
     .execute();
@@ -319,7 +320,7 @@ export async function getOrganizationBySlug(
       'organizations.provider_prefix as providerPrefix',
       'organizations.br_namespace as brNamespace',
     ])
-    .select((eb) => eb.fn.count('benchmark_records.id').as('recordCount'))
+    .select(publicRecordCountExpression().as('recordCount'))
     .where('organizations.slug', '=', slug.toLowerCase())
     .groupBy('organizations.id')
     .executeTakeFirst();

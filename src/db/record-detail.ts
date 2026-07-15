@@ -1,4 +1,5 @@
 import type { Database } from './database.js';
+import { publicRecordVisibilityExpression } from './public-record-visibility.js';
 import { formatBenchmarkDisplay } from '../registry/benchmark-display.js';
 
 function isoDate(value: unknown): string | null {
@@ -117,6 +118,7 @@ export async function getPublicRecordDetail(db: Database, identifier: string) {
       'evaluators.evaluator_type as evaluatorType',
     ])
     .where('benchmark_records.record_id', '=', identifier.trim().toUpperCase())
+    .where(publicRecordVisibilityExpression())
     .executeTakeFirst();
   if (core === undefined) return undefined;
 
