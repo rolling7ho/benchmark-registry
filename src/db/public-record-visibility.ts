@@ -72,3 +72,61 @@ export function publicRecordCountExpression(
 ): RawBuilder<string> {
   return sql<string>`count(${sql.ref(`${recordTable}.id`)}) filter (where ${publicRecordVisibilityExpression(recordTable)})`;
 }
+
+/**
+ * Returns the newest timestamp contributed by publicly visible records only.
+ * This prevents quarantined rows from changing public sitemap or SEO metadata.
+ */
+export function publicRecordMaxTimestampExpression(
+  column = 'updated_at',
+  recordTable = 'benchmark_records',
+): RawBuilder<Date | null> {
+  return sql<Date | null>`max(${sql.ref(`${recordTable}.${column}`)}) filter (where ${publicRecordVisibilityExpression(recordTable)})`;
+}
+
+/**
+ * Public source pages contain only non-AA sources referenced by at least one
+ * publicly visible record. Administrative source reads remain unchanged.
+ */
+export function publicSourceVisibilityExpression(
+  sourceTable = 'sources',
+): RawBuilder<boolean> {
+  if (!PUBLIC_ARTIFICIAL_ANALYSIS_QUARANTINE_ENABLED) {
+    return sql<boolean>`true`;
+  }
+
+  const sourceId = sql.ref(`${sourceTable}.id`);
+  const sourceUrl = sql.ref(`${sourceTable}.url`);
+  const sourcePublisher = sql.ref(`${sourceTable}.publisher`);
+
+  return sql<boolean>`
+    NOT (
+      lower(${sourceUrl}) ~ ${ARTIFICIAL_ANALYSIS_HOST_PATTERN}
+      OR lower(coalesce(${sourcePublisher}, '')) = 'artificial analysis'
+    )
+    AND (
+      EXISTS (
+        SELECT 1
+        FROM benchmark_records AS public_primary_record
+        WHERE public_primary_record.source_id = ${sourceId}
+          AND ${publicRecordVisibilityExpression('public_primary_record')}
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM benchmark_record_sources AS public_linked_source
+        JOIN benchmark_records AS public_linked_record
+          ON public_linked_record.id = public_linked_source.benchmark_record_id
+        WHERE public_linked_source.source_id = ${sourceId}
+          AND ${publicRecordVisibilityExpression('public_linked_record')}
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM record_provenance_events AS public_provenance_event
+        JOIN benchmark_records AS public_provenance_record
+          ON public_provenance_record.id = public_provenance_event.benchmark_record_id
+        WHERE public_provenance_event.source_id = ${sourceId}
+          AND ${publicRecordVisibilityExpression('public_provenance_record')}
+      )
+    )
+  `;
+}

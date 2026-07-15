@@ -3,13 +3,24 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../src/application.js';
 import { createDatabase, type Database } from '../../src/db/database.js';
+import {
+  getBenchmarkBySlug,
+  getOrganizationBySlug,
+  listSources,
+} from '../../src/db/registry-browse.js';
+import { getLastPublicRegistryUpdate } from '../../src/db/registry-metadata.js';
 import { getPublicRecordDetail } from '../../src/db/record-detail.js';
 import {
   getLeaderboardOptions,
   getRegistryRecords,
 } from '../../src/db/registry-records.js';
 import { seedTestData } from '../../src/db/seed-test-data.js';
-import { listRecordSitemapEntries } from '../../src/db/sitemaps.js';
+import {
+  listBenchmarkSitemapEntries,
+  listModelSitemapEntries,
+  listOrganizationSitemapEntries,
+  listRecordSitemapEntries,
+} from '../../src/db/sitemaps.js';
 import {
   compactSearchText,
   normalizeSearchText,
@@ -145,6 +156,7 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
               benchmark_version_id: original.benchmark_version_id,
               source_id: aaSource.id,
               sequence_number: 999,
+              updated_at: new Date('2099-01-01T00:00:00Z'),
             },
             {
               ...recordValues,
@@ -153,23 +165,42 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
               benchmark_version_id: nativeVersion.id,
               source_id: original.source_id,
               sequence_number: 998,
+              updated_at: new Date('2099-01-01T00:00:00Z'),
             },
           ])
           .execute();
 
-        const [options, directResult, nativeResult, sitemap] =
-          await Promise.all([
-            getLeaderboardOptions(database),
-            getRegistryRecords(database, {
-              kind: 'EXACT_RECORD',
-              recordId: directRecordId,
-            }),
-            getRegistryRecords(database, {
-              kind: 'EXACT_RECORD',
-              recordId: nativeRecordId,
-            }),
-            listRecordSitemapEntries(database, 1),
-          ]);
+        const [
+          options,
+          directResult,
+          nativeResult,
+          recordSitemap,
+          modelSitemap,
+          benchmarkSitemap,
+          organizationSitemap,
+          sources,
+          publicUpdate,
+          nativeBenchmarkDetails,
+          openAiDetails,
+        ] = await Promise.all([
+          getLeaderboardOptions(database),
+          getRegistryRecords(database, {
+            kind: 'EXACT_RECORD',
+            recordId: directRecordId,
+          }),
+          getRegistryRecords(database, {
+            kind: 'EXACT_RECORD',
+            recordId: nativeRecordId,
+          }),
+          listRecordSitemapEntries(database, 1),
+          listModelSitemapEntries(database),
+          listBenchmarkSitemapEntries(database),
+          listOrganizationSitemapEntries(database),
+          listSources(database),
+          getLastPublicRegistryUpdate(database),
+          getBenchmarkBySlug(database, 'gdpval-aa'),
+          getOrganizationBySlug(database, 'openai'),
+        ]);
         expect(options.recordCount).toBe(5);
         expect(directResult.records).toEqual([]);
         expect(nativeResult.records).toEqual([]);
@@ -180,17 +211,64 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
           undefined,
         );
         expect(
-          sitemap.some(
+          recordSitemap.some(
             (entry) =>
               entry.path.includes(directRecordId) ||
               entry.path.includes(nativeRecordId),
           ),
         ).toBe(false);
+        expect(
+          sources.some(
+            (source) =>
+              source.url ===
+              'https://leaderboard.artificialanalysis.ai/models/test',
+          ),
+        ).toBe(false);
+        expect(publicUpdate?.startsWith('2099-')).toBe(false);
+        expect(nativeBenchmarkDetails?.recordCount).toBe(0);
+        expect(openAiDetails?.recordCount).toBe(3);
+        for (const entries of [
+          modelSitemap,
+          benchmarkSitemap,
+          organizationSitemap,
+        ]) {
+          expect(
+            entries.some(
+              (entry) => entry.lastModified?.getUTCFullYear() === 2099,
+            ),
+          ).toBe(false);
+        }
 
         const app = createApp({ database });
-        expect(
-          (await app.inject({ url: `/records/${directRecordId}` })).statusCode,
-        ).toBe(404);
+        const hiddenDetail = await app.inject({
+          url: `/records/${directRecordId}`,
+        });
+        const hiddenSearch = await app.inject({
+          url: `/search?q=${directRecordId}`,
+        });
+        const sourcesPage = await app.inject({ url: '/sources' });
+        const homePage = await app.inject({ url: '/' });
+        const recordSitemapPage = await app.inject({
+          url: '/sitemaps/records-1.xml',
+        });
+        expect(hiddenDetail.statusCode).toBe(404);
+        expect(hiddenDetail.body).not.toContain(directRecordId);
+        expect(hiddenDetail.body).not.toContain('application/ld+json');
+        expect(hiddenSearch.statusCode).toBe(200);
+        expect(hiddenSearch.body).not.toContain(`/records/${directRecordId}`);
+        expect(sourcesPage.statusCode).toBe(200);
+        expect(sourcesPage.body).not.toContain(
+          'Artificial Analysis quarantine fixture',
+        );
+        expect(sourcesPage.body).not.toContain('artificialanalysis.ai');
+        expect(homePage.statusCode).toBe(200);
+        expect(homePage.body).toContain(
+          '<span class="registry-record-count">5 records</span>',
+        );
+        expect(homePage.body).not.toContain('2099-01-01');
+        expect(recordSitemapPage.statusCode).toBe(200);
+        expect(recordSitemapPage.body).not.toContain(directRecordId);
+        expect(recordSitemapPage.body).not.toContain(nativeRecordId);
         await app.close();
       } finally {
         await database

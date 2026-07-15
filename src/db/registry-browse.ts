@@ -1,6 +1,9 @@
 import type { RegistryStatus } from './constants.js';
 import type { Database } from './database.js';
-import { publicRecordCountExpression } from './public-record-visibility.js';
+import {
+  publicRecordCountExpression,
+  publicSourceVisibilityExpression,
+} from './public-record-visibility.js';
 import { modelSlug } from '../web/seo.js';
 
 export interface PublicModel {
@@ -357,6 +360,7 @@ export async function listSources(db: Database): Promise<PublicSource[]> {
       'published_date as publishedDate',
       'accessed_at as accessedAt',
     ])
+    .where(publicSourceVisibilityExpression())
     .orderBy('published_date', 'desc')
     .orderBy('id', 'desc')
     .execute();

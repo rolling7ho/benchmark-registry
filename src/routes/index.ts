@@ -12,7 +12,7 @@ import {
   listSources,
 } from '../db/registry-browse.js';
 import type { Database } from '../db/database.js';
-import { getLastDatabaseUpdate } from '../db/registry-metadata.js';
+import { getLastPublicRegistryUpdate } from '../db/registry-metadata.js';
 import { getPublicRecordDetail } from '../db/record-detail.js';
 import {
   getLeaderboardOptions,
@@ -371,7 +371,7 @@ const indexRoutes: FastifyPluginCallback<RouteOptions> = (
       ),
       database === undefined
         ? Promise.resolve(null)
-        : getLastDatabaseUpdate(database),
+        : getLastPublicRegistryUpdate(database),
       database === undefined
         ? Promise.resolve({
             recordCount: 0,
