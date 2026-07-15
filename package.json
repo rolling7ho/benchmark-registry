@@ -31,11 +31,13 @@
     "db:create-migration": "node-pg-migrate create --migrations-dir migrations --migration-file-language ts --tsx",
     "db:seed": "tsx src/scripts/seed-organizations.ts",
     "db:seed:test-data": "tsx src/scripts/seed-test-data.ts",
-    "registry": "tsx src/cli/index.ts"
+    "registry": "tsx src/cli/index.ts",
+    "admin:rotate-credentials": "node scripts/rotate-admin-credentials.mjs"
   },
   "dependencies": {
     "@fastify/compress": "9.0.0",
     "@fastify/helmet": "13.1.0",
+    "@fastify/multipart": "10.1.0",
     "@fastify/static": "10.1.0",
     "@fastify/view": "12.0.0",
     "@vercel/functions": "3.7.5",

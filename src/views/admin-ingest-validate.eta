@@ -1,0 +1,15 @@
+<% layout('layout.eta') %>
+<p><a href="/admin/ingest">← Source-assisted ingestion</a></p>
+<h1>Ingestion Validation</h1>
+<% if (it.issues.length === 0) { %>
+<p class="status-notice" role="status">No ingestion data integrity issues found.</p>
+<% } else { %>
+<div class="table-scroll" tabindex="0" aria-label="Ingestion validation issues table">
+  <table class="admin-ingest-table">
+    <thead><tr><th>Severity</th><th>Entity</th><th>Message</th></tr></thead>
+    <tbody>
+      <% it.issues.forEach(function(issue) { %><tr><td><%= issue.severity %></td><td><code><%= issue.entity %></code></td><td><%= issue.message %></td></tr><% }) %>
+    </tbody>
+  </table>
+</div>
+<% } %>
