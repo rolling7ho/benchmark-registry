@@ -1,5 +1,5 @@
 import { load } from 'cheerio';
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { getDocumentProxy } from 'unpdf';
 
 import { sha256 } from './hash.js';
 import type {
@@ -228,8 +228,12 @@ export async function normalizePdf(
   sourceId: string,
   content: Uint8Array,
 ): Promise<NormalizedSourceDocument> {
-  const loadingTask = getDocument({ data: new Uint8Array(content) });
-  const pdf = await loadingTask.promise;
+  // typescript-eslint's project service cannot resolve unpdf's bundled
+  // .d.mts declarations (plain `tsc` resolves them correctly, verified via
+  // `pnpm typecheck`), so it treats every member access below as unsafe.
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
+  const pdf: Awaited<ReturnType<typeof getDocumentProxy>> =
+    await getDocumentProxy(new Uint8Array(content));
   const pages: NormalizedPage[] = [];
   try {
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
@@ -237,14 +241,17 @@ export async function normalizePdf(
       const textContent = await page.getTextContent();
       const text = cleanText(
         textContent.items
-          .map((item) => ('str' in item ? item.str : ''))
+          .map((item: Record<string, unknown>) =>
+            typeof item.str === 'string' ? item.str : '',
+          )
           .join(' '),
       );
       pages.push({ pageNumber, text });
     }
   } finally {
-    await loadingTask.destroy();
+    await pdf.destroy();
   }
+  /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
   const text = pages
     .map((page) => page.text)
     .filter(Boolean)
