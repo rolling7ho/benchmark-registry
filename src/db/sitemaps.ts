@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 
 import type { Database } from './database.js';
+import { publicRecordVisibilityExpression } from './public-record-visibility.js';
 import { modelSlug } from '../web/seo.js';
 
 export const SITEMAP_BATCH_SIZE = 10_000;
@@ -22,6 +23,7 @@ export async function countRecordSitemapBatches(db: Database): Promise<number> {
   const row = await db
     .selectFrom('benchmark_records')
     .select((eb) => eb.fn.countAll<string>().as('count'))
+    .where(publicRecordVisibilityExpression())
     .executeTakeFirstOrThrow();
   return Math.max(1, Math.ceil(Number(row.count) / SITEMAP_BATCH_SIZE));
 }
@@ -144,6 +146,7 @@ export async function listRecordSitemapEntries(
       'benchmark_records.id',
     )
     .select(['benchmark_records.record_id as recordIdentifier'])
+    .where(publicRecordVisibilityExpression())
     .select(
       sql<Date>`greatest(benchmark_records.updated_at, coalesce(max(record_provenance_events.created_at), benchmark_records.updated_at), coalesce(max(benchmark_record_sources.created_at), benchmark_records.updated_at))`.as(
         'lastModified',

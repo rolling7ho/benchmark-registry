@@ -3,8 +3,13 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../src/application.js';
 import { createDatabase, type Database } from '../../src/db/database.js';
-import { getRegistryRecords } from '../../src/db/registry-records.js';
+import { getPublicRecordDetail } from '../../src/db/record-detail.js';
+import {
+  getLeaderboardOptions,
+  getRegistryRecords,
+} from '../../src/db/registry-records.js';
 import { seedTestData } from '../../src/db/seed-test-data.js';
+import { listRecordSitemapEntries } from '../../src/db/sitemaps.js';
 import {
   compactSearchText,
   normalizeSearchText,
@@ -68,6 +73,143 @@ describe.skipIf(integrationDatabaseUrl === undefined)(
       expect(result.records.map((record) => record.recordId)).toEqual([
         'BR-00155-001',
       ]);
+    });
+
+    it('quarantines Artificial Analysis records from every public read path', async () => {
+      const original = await database
+        .selectFrom('benchmark_records')
+        .selectAll()
+        .where('record_id', '=', 'BR-00155-001')
+        .executeTakeFirstOrThrow();
+      const aaSource = await database
+        .insertInto('sources')
+        .values({
+          url: 'https://leaderboard.artificialanalysis.ai/models/test',
+          title: 'Artificial Analysis quarantine fixture',
+          source_type: 'OTHER',
+          publisher: 'Artificial Analysis',
+          published_date: null,
+          accessed_at: new Date('2026-07-15T00:00:00Z'),
+        })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+      const nativeBenchmark = await database
+        .insertInto('benchmarks')
+        .values({
+          slug: 'gdpval-aa',
+          name: 'GDPval-AA',
+          organization_name: 'Artificial Analysis',
+          version: null,
+        })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+      const nativeVersion = await database
+        .insertInto('benchmark_versions')
+        .values({
+          benchmark_id: nativeBenchmark.id,
+          canonical_reference: 'gdpval-aa/default',
+          version_label: null,
+          variant_name: null,
+          status: 'ACTIVE',
+          release_date: null,
+          notes: null,
+        })
+        .returning('id')
+        .executeTakeFirstOrThrow();
+      const recordValues = {
+        model_id: original.model_id,
+        evaluation_configuration_id: original.evaluation_configuration_id,
+        model_snapshot_id: original.model_snapshot_id,
+        evaluator_id: original.evaluator_id,
+        metric_id: original.metric_id,
+        score_value: original.score_value,
+        score_display: original.score_display,
+        evaluation_date: original.evaluation_date,
+        reported_date: original.reported_date,
+        report_type: original.report_type,
+        status: original.status,
+        notes: original.notes,
+        superseded_by_record_id: null,
+      } as const;
+      const directRecordId = 'BR-00155-999';
+      const nativeRecordId = 'BR-00155-998';
+
+      try {
+        await database
+          .insertInto('benchmark_records')
+          .values([
+            {
+              ...recordValues,
+              record_id: directRecordId,
+              benchmark_id: original.benchmark_id,
+              benchmark_version_id: original.benchmark_version_id,
+              source_id: aaSource.id,
+              sequence_number: 999,
+            },
+            {
+              ...recordValues,
+              record_id: nativeRecordId,
+              benchmark_id: nativeBenchmark.id,
+              benchmark_version_id: nativeVersion.id,
+              source_id: original.source_id,
+              sequence_number: 998,
+            },
+          ])
+          .execute();
+
+        const [options, directResult, nativeResult, sitemap] =
+          await Promise.all([
+            getLeaderboardOptions(database),
+            getRegistryRecords(database, {
+              kind: 'EXACT_RECORD',
+              recordId: directRecordId,
+            }),
+            getRegistryRecords(database, {
+              kind: 'EXACT_RECORD',
+              recordId: nativeRecordId,
+            }),
+            listRecordSitemapEntries(database, 1),
+          ]);
+        expect(options.recordCount).toBe(5);
+        expect(directResult.records).toEqual([]);
+        expect(nativeResult.records).toEqual([]);
+        expect((await resolveSearch(database, directRecordId)).kind).not.toBe(
+          'EXACT_RECORD',
+        );
+        expect(await getPublicRecordDetail(database, directRecordId)).toBe(
+          undefined,
+        );
+        expect(
+          sitemap.some(
+            (entry) =>
+              entry.path.includes(directRecordId) ||
+              entry.path.includes(nativeRecordId),
+          ),
+        ).toBe(false);
+
+        const app = createApp({ database });
+        expect(
+          (await app.inject({ url: `/records/${directRecordId}` })).statusCode,
+        ).toBe(404);
+        await app.close();
+      } finally {
+        await database
+          .deleteFrom('benchmark_records')
+          .where('record_id', 'in', [directRecordId, nativeRecordId])
+          .execute();
+        await database
+          .deleteFrom('benchmark_versions')
+          .where('id', '=', nativeVersion.id)
+          .execute();
+        await database
+          .deleteFrom('benchmarks')
+          .where('id', '=', nativeBenchmark.id)
+          .execute();
+        await database
+          .deleteFrom('sources')
+          .where('id', '=', aaSource.id)
+          .execute();
+      }
     });
 
     it('supports field operators, comma search, and OR alternatives', async () => {

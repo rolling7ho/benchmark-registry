@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 
 import type { Database } from '../db/database.js';
+import { publicRecordVisibilityExpression } from '../db/public-record-visibility.js';
 import { compactSearchText, normalizeSearchText } from './normalize.js';
 import { parseSearchQuery, type ParsedSearchQuery } from './query-language.js';
 
@@ -60,6 +61,7 @@ export async function resolveSearch(
              NULL::text AS alias_type
       FROM benchmark_records
       WHERE benchmark_records.record_id = ${identifierCandidate}
+        AND ${publicRecordVisibilityExpression()}
 
       UNION ALL
       SELECT 10 AS priority, 'RECORD_PREFIX' AS kind,

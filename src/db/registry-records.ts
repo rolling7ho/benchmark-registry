@@ -9,6 +9,7 @@ import {
 import type { RegistryStatus } from './constants.js';
 import type { Database } from './database.js';
 import type { DatabaseSchema } from './types.js';
+import { publicRecordVisibilityExpression } from './public-record-visibility.js';
 import { formatBenchmarkDisplay } from '../registry/benchmark-display.js';
 import { compactSearchText } from '../search/normalize.js';
 import type {
@@ -105,7 +106,8 @@ function joinedRecords(db: Database): JoinedQuery {
     )
     .innerJoin('metrics', 'metrics.id', 'benchmark_records.metric_id')
     .innerJoin('sources', 'sources.id', 'benchmark_records.source_id')
-    .innerJoin('organizations', 'organizations.id', 'models.organization_id');
+    .innerJoin('organizations', 'organizations.id', 'models.organization_id')
+    .where(publicRecordVisibilityExpression());
 }
 
 function escapedLikePattern(query: string): string {
@@ -513,6 +515,7 @@ export async function getLeaderboardOptions(
       .selectFrom('benchmark_records')
       .select((eb) => eb.fn.countAll<string>().as('count'))
       .where('benchmark_records.status', '=', 'ACTIVE')
+      .where(publicRecordVisibilityExpression())
       .executeTakeFirstOrThrow(),
     db
       .selectFrom('benchmark_records')
@@ -520,6 +523,7 @@ export async function getLeaderboardOptions(
       .select(['models.model_id as value', 'models.official_name as label'])
       .distinct()
       .where('benchmark_records.status', '=', 'ACTIVE')
+      .where(publicRecordVisibilityExpression())
       .orderBy('models.official_name', 'asc')
       .execute()
       .then((rows) =>
@@ -535,6 +539,7 @@ export async function getLeaderboardOptions(
       .select(['benchmarks.slug as value', 'benchmarks.name as label'])
       .distinct()
       .where('benchmark_records.status', '=', 'ACTIVE')
+      .where(publicRecordVisibilityExpression())
       .orderBy('benchmarks.name', 'asc')
       .execute(),
     db
@@ -543,6 +548,7 @@ export async function getLeaderboardOptions(
       .select(['metrics.slug as value', 'metrics.name as label'])
       .distinct()
       .where('benchmark_records.status', '=', 'ACTIVE')
+      .where(publicRecordVisibilityExpression())
       .orderBy('metrics.name', 'asc')
       .execute(),
   ]);
