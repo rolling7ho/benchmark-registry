@@ -126,6 +126,14 @@ describe('public application routes without a database', () => {
     expect(response.body).not.toContain('How Benchmark Registry works');
   });
 
+  it.each(['/api', '/export', '/records.json', '/records.csv'])(
+    'does not expose an unpublished public data surface at %s',
+    async (url) => {
+      const response = await app.inject({ method: 'GET', url });
+      expect(response.statusCode).toBe(404);
+    },
+  );
+
   it('serves the stable search-compatible favicon', async () => {
     const response = await app.inject({
       method: 'GET',

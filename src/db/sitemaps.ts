@@ -1,7 +1,10 @@
 import { sql } from 'kysely';
 
 import type { Database } from './database.js';
-import { publicRecordVisibilityExpression } from './public-record-visibility.js';
+import {
+  publicRecordMaxTimestampExpression,
+  publicRecordVisibilityExpression,
+} from './public-record-visibility.js';
 import { modelSlug } from '../web/seo.js';
 
 export const SITEMAP_BATCH_SIZE = 10_000;
@@ -36,7 +39,7 @@ export async function listModelSitemapEntries(
     .leftJoin('benchmark_records', 'benchmark_records.model_id', 'models.id')
     .select(['models.model_id as modelIdentifier'])
     .select(
-      sql<Date>`greatest(models.updated_at, coalesce(max(benchmark_records.updated_at), models.updated_at))`.as(
+      sql<Date>`greatest(models.updated_at, coalesce(${publicRecordMaxTimestampExpression()}, models.updated_at))`.as(
         'lastModified',
       ),
     )
@@ -58,7 +61,7 @@ export async function listOrganizationSitemapEntries(
     .leftJoin('benchmark_records', 'benchmark_records.model_id', 'models.id')
     .select(['organizations.slug'])
     .select(
-      sql<Date>`greatest(organizations.updated_at, coalesce(max(models.updated_at), organizations.updated_at), coalesce(max(benchmark_records.updated_at), organizations.updated_at))`.as(
+      sql<Date>`greatest(organizations.updated_at, coalesce(max(models.updated_at), organizations.updated_at), coalesce(${publicRecordMaxTimestampExpression()}, organizations.updated_at))`.as(
         'lastModified',
       ),
     )
@@ -83,7 +86,7 @@ export async function listBenchmarkSitemapEntries(
     )
     .select(['benchmarks.slug'])
     .select(
-      sql<Date>`greatest(benchmarks.updated_at, coalesce(max(benchmark_records.updated_at), benchmarks.updated_at))`.as(
+      sql<Date>`greatest(benchmarks.updated_at, coalesce(${publicRecordMaxTimestampExpression()}, benchmarks.updated_at))`.as(
         'lastModified',
       ),
     )
@@ -103,7 +106,7 @@ export async function listBenchmarkSitemapEntries(
       'benchmark_versions.canonical_reference as canonicalReference',
     ])
     .select(
-      sql<Date>`greatest(benchmark_versions.updated_at, coalesce(max(benchmark_records.updated_at), benchmark_versions.updated_at))`.as(
+      sql<Date>`greatest(benchmark_versions.updated_at, coalesce(${publicRecordMaxTimestampExpression()}, benchmark_versions.updated_at))`.as(
         'lastModified',
       ),
     )
