@@ -477,6 +477,38 @@ pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.admin-nav-list {
+  max-width: 700px;
+  line-height: 1.5;
+}
+.ingest-start-forms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+.ingest-start-forms .status-form {
+  flex: 1 1 340px;
+  align-items: start;
+  flex-direction: column;
+}
+.admin-ingest-table {
+  min-width: 900px;
+}
+.ingest-review-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px 14px;
+  max-width: 1100px;
+  border: 1px solid #999;
+  background: #f1f3f5;
+  padding: 10px;
+  margin: 7px 0;
+}
+.ingest-review-form button {
+  grid-column: 1 / -1;
+  width: fit-content;
+}
 @media (max-width: 640px) {
   :root {
     font-size: 13px;

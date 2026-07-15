@@ -23,9 +23,12 @@ const environmentSchema = z
         },
         { message: 'Must be a valid PostgreSQL connection URL' },
       ),
-    ADMIN_USERNAME: z.string().min(1).max(128).optional(),
-    ADMIN_PASSWORD: z.string().min(12).max(1024).optional(),
-    FEEDBACK_RATE_LIMIT_SECRET: z.string().min(32).max(1024).optional(),
+    // .trim() guards against a common Vercel dashboard footgun: pasting a
+    // credential into the environment variable UI often captures an
+    // invisible trailing newline, which silently breaks exact-match auth.
+    ADMIN_USERNAME: z.string().trim().min(1).max(128).optional(),
+    ADMIN_PASSWORD: z.string().trim().min(12).max(1024).optional(),
+    FEEDBACK_RATE_LIMIT_SECRET: z.string().trim().min(32).max(1024).optional(),
   })
   .superRefine((environment, context) => {
     if (
