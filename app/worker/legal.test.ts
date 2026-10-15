@@ -50,7 +50,7 @@ it.each(pages)("keeps the canonical and marks query variants noindex on %s", asy
 it("serves final legal text with the official contact and keeps funding placeholders out of public HTML", async () => {
   const {env}=fixture();
   const about=await (await handleRequest(new Request("https://benchmarkregistry.org/about"),env)).text();
-  expect(about).toContain("a project of Densa Labs");expect(about).not.toContain("Funding and neutrality statement");
+  expect(about).not.toContain("Densa");expect(about).not.toContain("Funding and neutrality statement");
   const privacy=await (await handleRequest(new Request("https://benchmarkregistry.org/privacy"),env)).text();
   expect(privacy).toContain("Cloudflare Web Analytics");
   expect(privacy).toContain("does not keep search logs");

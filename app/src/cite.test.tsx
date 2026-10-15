@@ -40,7 +40,7 @@ it("builds the citation dialog from the row on demand and returns focus on close
   expect(dialog?.textContent).toContain(`Record No. ${row.result_key}`);
   expect(dialog?.textContent).toContain("@misc{");
   expect(dialog?.querySelector(`a[href="${recordPermalink(row)}"]`)).not.toBeNull();
-  expect(dialog?.querySelector('a[href*="github.com/densa-labs/benchmark-registry/issues/new?"]')).not.toBeNull();
+  expect(dialog?.querySelector('a[href*="github.com/rolling7ho/benchmark-registry/issues/new?"]')).not.toBeNull();
   await act(() => { dialog?.dispatchEvent(new Event("close")); });
   expect(container.querySelector("dialog")).toBeNull();
   expect(document.activeElement).toBe(container.querySelector("button.record-cite"));

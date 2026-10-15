@@ -9,8 +9,8 @@ reaches the live site only through the maintainers' ingestion and deploy steps.
 Most contributions are evidence, not code. Open an issue with one of the
 templates:
 
-- [Correct a result](https://github.com/densa-labs/benchmark-registry/issues/new?template=correct-a-result.yml)
-- [Submit a missing result](https://github.com/densa-labs/benchmark-registry/issues/new?template=submit-a-missing-result.yml)
+- [Correct a result](https://github.com/rolling7ho/benchmark-registry/issues/new?template=correct-a-result.yml)
+- [Submit a missing result](https://github.com/rolling7ho/benchmark-registry/issues/new?template=submit-a-missing-result.yml)
 
 Link a primary source: the benchmark or evaluator's own results, or the model
 developer's model card, system card, technical report or blog. Search snippets,

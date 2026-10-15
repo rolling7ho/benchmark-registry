@@ -98,7 +98,7 @@ describe("P11.8 visible interactions", () => {
     await mount(<AppShell navigation={navigation} dataUpdated="2026-10-02T00:00:00Z"><p>Registry</p></AppShell>);
     expect(container.querySelector('.site-footer__links a[href="/legal"]')?.getAttribute("href")).toBe("/legal");
     const github = container.querySelector(".github-link")!;
-    expect(github.getAttribute("href")).toBe("https://github.com/densa-labs/benchmark-registry");
+    expect(github.getAttribute("href")).toBe("https://github.com/rolling7ho/benchmark-registry");
     expect(github.getAttribute("aria-label")).toBeTruthy();
     expect(github.textContent).toBe("");
     expect(github.querySelector("svg")).toBeTruthy();

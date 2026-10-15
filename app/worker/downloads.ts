@@ -45,7 +45,7 @@ export function llmsText(counts: { models: number; benchmarks: number; versions:
 
 > A free, open registry of AI models and their benchmark results. Every result links to its primary source and records the benchmark version, metric, reasoning or effort setting, who reported it and when. It is not a leaderboard: there is no ranking and no composite score.
 
-Currently ${number(counts.results)} results across ${number(counts.models)} models, ${number(counts.benchmarks)} benchmarks and ${number(counts.versions)} benchmark versions. Maintained by Densa Labs.
+Currently ${number(counts.results)} results across ${number(counts.models)} models, ${number(counts.benchmarks)} benchmarks and ${number(counts.versions)} benchmark versions.
 
 ## Sourcing
 
@@ -65,7 +65,7 @@ Results come from primary sources only: the benchmark's or evaluator's own publi
 
 - [All published results as CSV](${CANONICAL_ORIGIN}/${RESULTS_CSV_PATH}): one row per result with its source URL and record URL
 - Licence: [${DATA_LICENSE.name}](${DATA_LICENSE.url}). Credit "Benchmark Registry (benchmarkregistry.org)" and link the record you cite.
-- Code (Apache 2.0): https://github.com/densa-labs/benchmark-registry
+- Code (Apache 2.0): https://github.com/rolling7ho/benchmark-registry
 
 ## Citing
 

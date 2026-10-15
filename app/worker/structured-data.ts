@@ -7,8 +7,7 @@ export function structuredData(metadata:DocumentMetadata):Record<string,unknown>
   const graph:Record<string,unknown>[]=[];
   if(path==="/") {
     graph.push({...publisher,"@id":`${CANONICAL_ORIGIN}/#organization`,logo:`${CANONICAL_ORIGIN}/assets/Benchmark-Registry-B-Logo-Dark.png`,
-      parentOrganization:{"@type":"Organization",name:"Densa Labs",url:"https://densa-labs.github.io/"},
-      sameAs:["https://densa-labs.github.io/","https://github.com/densa-labs/benchmark-registry"]});
+      sameAs:["https://github.com/rolling7ho/benchmark-registry"]});
     graph.push({"@type":"WebSite",name:"Benchmark Registry",url:CANONICAL_ORIGIN,publisher:{"@id":`${CANONICAL_ORIGIN}/#organization`}});
   } else graph.push({"@type":"BreadcrumbList",itemListElement:breadcrumbsForPath(path,metadata.page?.name,metadata.page?.familyName)
     // A missing page lists only the crumbs that exist, never its own URL.

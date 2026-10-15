@@ -83,10 +83,7 @@ export function AppShell({
       <footer className="site-footer">
         <PageContainer className="site-footer__inner">
           <div className="site-footer__dates"><p>
-            © 2026{" "}
-            <a className="site-footer__credit-link" href="https://densa-labs.github.io/" rel="noopener noreferrer">
-              Densa Labs
-            </a>
+            © 2026 Benchmark Registry
           </p>
           <button data-nosnippet className="last-updated" type="button" aria-pressed={showBuildTime} aria-describedby="last-updated-help" onClick={() => setShowBuildTime((shown) => !shown)}>
             {showBuildTime ? `Application build: ${buildTime}` : dataUpdated ? `Last updated: ${dataUpdated.slice(0,10)}` : "Application build details"}
@@ -94,7 +91,7 @@ export function AppShell({
           <nav className="site-footer__links" aria-label="Footer navigation"><a href="/recent">Recently added</a><a href="/feed.xml">Atom feed</a><a href="/coverage">Coverage</a><a href="/corrections">Corrections</a><a href="/about">About</a><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/legal">Legal</a></nav>
           <div className="site-footer__controls">
             <ThemeToggle theme={preference} onSelectTheme={selectTheme} />
-            <a className="github-link" href="https://github.com/densa-labs/benchmark-registry" aria-label="Benchmark Registry on GitHub"><GitHubIcon /></a>
+            <a className="github-link" href="https://github.com/rolling7ho/benchmark-registry" aria-label="Benchmark Registry on GitHub"><GitHubIcon /></a>
           </div>
         </PageContainer>
       </footer>

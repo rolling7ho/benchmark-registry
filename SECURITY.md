@@ -4,7 +4,7 @@
 
 Please report security issues privately. Do not open a public issue.
 
-- Preferred: [report a vulnerability](https://github.com/densa-labs/benchmark-registry/security/advisories/new)
+- Preferred: [report a vulnerability](https://github.com/rolling7ho/benchmark-registry/security/advisories/new)
   through GitHub's private vulnerability reporting.
 - Or email support@benchmarkregistry.org with "Security" in the subject.
 

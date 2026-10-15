@@ -2,7 +2,7 @@ import { SUPPORT_EMAIL } from "./legal-content";
 export function PrivacyContent({analyticsEnabled=false}:{analyticsEnabled?:boolean}) {
   return <>
     <p className="legal-updated">Last updated October 5, 2026</p>
-    <p>Benchmark Registry is a public reference of AI benchmark results, run by Densa Labs. You can use it without an account, and it does not ask for personal information.</p>
+    <p>Benchmark Registry is a public reference of AI benchmark results. You can use it without an account, and it does not ask for personal information.</p>
     <h2>What the site stores in your browser</h2><p>If you choose a colour theme, the site remembers it in your browser's local storage. Your browser may also cache pages and published data files. The registry itself does not set cookies.</p>
     <h2>Search and filters</h2><p>Searches, filters, sorting and paging run in your browser against the published data files. Their terms appear in the page address so that a view can be shared. The registry does not keep search logs.</p>
     <h2>Hosting and security</h2><p>Cloudflare hosts and delivers the site. To deliver pages and protect the service, Cloudflare processes request information such as IP addresses and browser details, and its security features may set cookies or session storage that keep the site available. See <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener noreferrer">Cloudflare's privacy policy</a>.</p>

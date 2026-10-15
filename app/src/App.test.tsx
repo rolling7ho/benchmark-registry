@@ -35,7 +35,8 @@ describe("Registry foundation view", () => {
     expect(markup).toContain('id="main-content"');
     expect(markup).toContain('class="wordmark__logo"');
     expect(markup).toContain("© 2026");
-    expect(markup).toContain('href="https://densa-labs.github.io/" rel="noopener noreferrer">Densa Labs</a>');
+    expect(markup).toContain("© 2026 Benchmark Registry");
+    expect(markup).not.toContain("Densa");
     expect(markup).toContain('name="color-theme"');
     expect(markup).toContain('value="light"');
     expect(markup).toContain('value="dark"');
